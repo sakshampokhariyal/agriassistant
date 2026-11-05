@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, MessageCircle, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
   Grid2x2, LogIn, LogOut, X, FlaskConical, ChevronDown, ShieldCheck, Megaphone, Umbrella,
-  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff, Smartphone,
+  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff, Smartphone, Store,
 } from 'lucide-react';
 import { MotionConfig } from 'framer-motion';
 import { useApp } from '../context/AppContext';
@@ -25,6 +25,7 @@ export const NAV = [
   { to: '/weather', key: 'nav.weather', icon: CloudSun },
   { to: '/calendar', key: 'nav.calendar', icon: CalendarDays },
   { to: '/market', key: 'nav.market', icon: LineChart },
+  { to: '/nearby', key: 'nav.nearby', icon: Store },
   { to: '/schemes', key: 'nav.schemes', icon: Landmark },
   { to: '/insurance', key: 'nav.insurance', icon: Umbrella },
   // Not in the sidebar / More menu; still reached from the chat and Crop Doctor "Ask an expert" links.

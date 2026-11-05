@@ -82,14 +82,16 @@ export function fertilizerPlan(cropKey, levels, acres) {
   });
   const dap = need.P / 0.46;
   const urea = Math.max(0, need.N - dap * 0.18) / 0.46;
-  const mop = need.K / 0.6;
+  // Tobacco must get potassium sulphate (SOP, 50% K₂O) – chloride in MOP spoils leaf quality.
+  const potash = rdf.potash === 'sop' ? { id: 'sop', share: 0.5 } : { id: 'mop', share: 0.6 };
+  const mop = need.K / potash.share;
   const bags = (kg, size) => Math.round((kg / size) * 2) / 2; // nearest half bag
   return {
     need,
     products: [
       { id: 'urea', kg: urea, bags: bags(urea, BAG_KG.urea), bagKg: BAG_KG.urea },
       { id: 'dap', kg: dap, bags: bags(dap, BAG_KG.dap), bagKg: BAG_KG.dap },
-      { id: 'mop', kg: mop, bags: bags(mop, BAG_KG.mop), bagKg: BAG_KG.mop },
+      { id: potash.id, kg: mop, bags: bags(mop, BAG_KG.mop), bagKg: BAG_KG.mop },
     ],
   };
 }

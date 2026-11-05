@@ -1,19 +1,21 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  MapPin, Search, Mic, Droplets, Wind, CloudRain, ArrowRight, ArrowUpRight, ArrowDownRight, AlertTriangle,
-  Circle, Sprout, CalendarDays, LineChart, Landmark,
+  MapPin, Droplets, Wind, CloudRain, ArrowRight, AlertTriangle, Stethoscope, LineChart, Store, Landmark, Sprout, Plus, CalendarDays,
 } from 'lucide-react';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import { useApp } from '../context/AppContext';
 import useCropViews from '../hooks/useCropViews';
 import { useWeather } from '../context/WeatherContext';
-import { useChat } from '../context/ChatContext';
 import TodayAction from '../components/TodayAction';
 import { conditionFromCode } from '../services/weather';
 import { alertText, fmt } from '../utils/weatherText';
 import { placeText, useFarmLocation } from '../context/LocationContext';
 import { savedPlaceNear } from '../services/location';
+import { dateLabelKey } from '../data/farmer';
+import { fieldLabel } from '../utils/fields';
+import { fmtDate, fmtLong } from '../utils/date';
+import WeatherIcon from '../components/WeatherIcon';
+import CropArt from '../components/CropArt';
+import AerialFields from '../components/AerialFields';
 
 const ADVICE_CHIP = {
   red: 'bg-red-500 text-white',
@@ -22,394 +24,207 @@ const ADVICE_CHIP = {
   green: 'bg-emerald-400 text-emerald-950',
   gray: 'bg-white/20 text-white',
 };
-import { schemes, isRelevant } from '../data/schemes';
-import { demoQuestion } from '../data/ai';
-import { getSeries, todayPrices } from '../data/markets';
-import { categoryStyle } from '../data/tasks';
-import { fmtDate, fmtLong, fmtNum, todayISO } from '../utils/date';
-import { Badge, ProgressBar } from '../components/ui';
-import WeatherIcon from '../components/WeatherIcon';
-import CropArt from '../components/CropArt';
-import AerialFields, { Photo } from '../components/AerialFields';
+
+const QUICK = [
+  { to: '/crop-doctor', key: 'nav.cropDoctor', sub: 'home.q.doctor', icon: Stethoscope, tone: 'bg-emerald-50 text-emerald-700' },
+  { to: '/market', key: 'nav.market', sub: 'home.q.market', icon: LineChart, tone: 'bg-amber-50 text-amber-700' },
+  { to: '/nearby', key: 'home.q.shops', sub: 'home.q.shopsSub', icon: Store, tone: 'bg-sky-50 text-sky-700' },
+  { to: '/schemes', key: 'nav.schemes', sub: 'home.q.schemes', icon: Landmark, tone: 'bg-indigo-50 text-indigo-700' },
+];
+
+/** The four growth phases shown on Home, mapped from each crop's own stage keys. */
+const PHASES = ['sow', 'veg', 'flower', 'harvest'];
+const PHASE_OF = {
+  nursery: 0, emergence: 0, germination: 0, establish: 0,
+  vegetative: 1, tillering: 1, jointing: 1, grandGrowth: 1, branching: 1, kneeHigh: 1, squaring: 1, topping: 1,
+  flowering: 2, heading: 2, panicle: 2, silking: 2, pegging: 2, podding: 2, pods: 2, fruitSet: 2, bolls: 2, fruitDev: 2,
+  grainFill: 3, maturity: 3, ripening: 3, priming: 3, harvest: 3,
+};
+const phaseIndex = (c) => {
+  if (c.elapsed < 0) return -1;
+  if (c.stageKey in PHASE_OF) return PHASE_OF[c.stageKey];
+  return Math.min(3, Math.floor((c.progress / 100) * 4));
+};
 
 const greetingKey = () => {
   const h = new Date().getHours();
   return h < 12 ? 'greet.morning' : h < 17 ? 'greet.afternoon' : 'greet.evening';
 };
 
-const SERVICES = [
-  { to: '/crops', k: 'nav.crops', d: 'svc.crops', photo: 'photo-1523348837708-15d4a09cfac2', icon: Sprout },
-  { to: '/weather', k: 'nav.weather', d: 'svc.weather', photo: 'photo-1560493676-04071c5f467b', icon: CloudRain },
-  { to: '/schemes', k: 'nav.schemes', d: 'svc.schemes', photo: 'photo-1574943320219-553eb213f72d', icon: Landmark },
-  { to: '/market', k: 'nav.market', d: 'svc.market', photo: 'photo-1464226184884-fa280b87c399', icon: LineChart },
-  { to: '/calendar', k: 'nav.calendar', d: 'svc.calendar', photo: 'photo-1586771107445-d3ca888129ff', icon: CalendarDays },
-  { to: '/community', k: 'nav.community', d: 'svc.community', photo: 'photo-1500937386664-56d1dfef3854', icon: MapPin },
-];
-
-const JOURNEY = ['/', '/weather', '/assistant', '/crops', '/schemes', '/market', '/calendar'];
-const JOURNEY_KEYS = ['nav.dashboard', 'nav.weather', 'nav.assistant', 'nav.crops', 'nav.schemes', 'nav.market', 'nav.calendar'];
-
-function SectionBadge({ children, glass = false }) {
-  return (
-    <span className={glass ? 'pill-badge-glass' : 'pill-badge'}>
-      <span className="pill-dot" /> {children}
-    </span>
-  );
-}
-
-function MoreLink({ to, children }) {
-  return (
-    <Link to={to} className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-600 min-h-[40px]">
-      {children} <ArrowRight size={15} />
-    </Link>
-  );
-}
-
 export default function Dashboard() {
-  const { t, L, lang, profile, tasks, toggleTask, toast } = useApp();
-  const crops = useCropViews();
-  const nav = useNavigate();
-  const [q, setQ] = useState('');
+  const { t, lang, profile } = useApp();
   const wx = useWeather();
   const farmLocation = useFarmLocation();
-  const near = wx.source === 'gps' ? savedPlaceNear(wx.coords) : null;
-  const wxPlace = near ? near.city || near.label : '';
-  const wd = wx.data;
-  const topAlert = wx.alerts[0] ? alertText(wx.alerts[0], t, lang) : null;
-  const today = todayISO();
-
-  const pendingTasks = tasks.filter((x) => !x.done);
-  const upcoming = [...pendingTasks].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
-  const ragiPrices = todayPrices('ragi').sort((a, b) => b.net - a.net);
-  const local = ragiPrices.find((p) => p.id === 'mandya');
-  const ragiSeries = getSeries('ragi', 'mandya', 14);
-  const lead = crops.find((c) => c.cropId === 'ragi') || crops[0];
-  const matched = schemes
-    .filter((s) => isRelevant(s, profile, crops))
-    .sort((a, b) => Number(!!b.needsCrop) - Number(!!a.needsCrop))
-    .slice(0, 3);
-
-  const { ask } = useChat();
-  const submit = (e) => {
-    e.preventDefault();
-    if (q.trim()) ask(q.trim());
-  };
-
-  const stats = [
-    { v: profile.landSize, unit: t('common.acres'), label: t('stat.land') },
-    { v: crops.length, label: t('stat.crops') },
-    { v: pendingTasks.length, label: t('stat.tasks') },
-    { v: `₹${fmtNum(local.modal, lang)}`, label: t('stat.ragi') },
-  ];
+  const first = profile.name?.trim().split(' ')[0];
 
   return (
     <div>
-      {/* ───────────── Hero over aerial fields ───────────── */}
+      {/* Header: greeting, live date, detected location, then today's to-do */}
       <section className="relative -mt-[72px] overflow-hidden text-white">
         <AerialFields className="absolute inset-0 h-full w-full" />
-        <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-6 md:pb-10 flex flex-col">
-          <div className="self-start"><SectionBadge glass>{t('hero.badge')}</SectionBadge></div>
-          <p className="mt-5 text-white/80 flex flex-wrap items-center gap-x-2">
-            <span>{t(greetingKey())}{profile.name?.trim() ? `, ${profile.name.trim().split(' ')[0]}` : ''}</span>
-            <span className="text-white/40">·</span>
-            <span className="inline-flex items-center gap-1"><MapPin size={15} aria-hidden /> {placeText(profile, farmLocation)}</span>
-            <span className="hidden sm:inline text-white/40">·</span>
-            <span className="hidden sm:inline">{fmtLong(lang)}</span>
+        <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-8 md:pb-12">
+          <h1 className="display text-[2.2rem] sm:text-5xl break-words">
+            {t(greetingKey())}{first ? `, ${first}` : ''}
+          </h1>
+          <p className="mt-3 text-white/85 flex flex-wrap items-center gap-x-3 gap-y-1 text-base md:text-lg">
+            <span className="inline-flex items-center gap-1.5"><CalendarDays size={17} aria-hidden /> {fmtLong(lang)}</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin size={17} aria-hidden /> {placeText(profile, farmLocation)}</span>
           </p>
-          <h1 className="display mt-3 max-w-4xl text-[2.4rem] sm:text-5xl lg:text-6xl break-words">{t('hero.title')}</h1>
-
-          {/* Daily "Today's action" AI agent – the first thing a farmer sees */}
-          <div className="mt-6 mb-6">
+          <div className="mt-6 md:mt-8">
             <TodayAction />
           </div>
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,23rem)_minmax(0,19rem)_1fr] items-end">
-            {/* Right block: copy + CTA + search (first on mobile) */}
-            <div className="order-first lg:order-last lg:justify-self-end lg:max-w-sm space-y-4">
-              <p className="text-white/85 text-base md:text-lg leading-relaxed">{t('hero.sub')}</p>
-              <form onSubmit={submit}>
-                <label className="sr-only" htmlFor="dash-search">{t('dash.search')}</label>
-                <div className="flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 pl-4 pr-1.5 min-h-[52px] focus-within:bg-white/25">
-                  <Search size={18} aria-hidden className="text-white/80" />
-                  <input
-                    id="dash-search"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder={t('dash.search')}
-                    className="flex-1 bg-transparent outline-none placeholder:text-white/70 min-w-0"
-                  />
-                  <button type="button" onClick={() => ask(L(demoQuestion))} aria-label={t('assistant.voice')} className="h-10 w-10 rounded-full bg-white text-emerald-800 grid place-items-center hover:bg-cream-100">
-                    <Mic size={18} />
-                  </button>
-                </div>
-              </form>
-              <button onClick={() => ask(L(demoQuestion))} className="btn-primary">
-                {t('hero.cta')} <ArrowRight size={18} />
-              </button>
-            </div>
-
-            {/* Weather glass card */}
-            <Link to="/weather" className="glass-card block hover:bg-emerald-950/70 transition">
-              <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-white/70">
-                <span className="truncate">{wx.source === 'gps' ? (wxPlace ? `${wxPlace} · ${t('dash.weatherNow')}` : t('dash.weatherNow')) : `${t('wx.locDefault').split(' (')[0]} · ${t('dash.weatherNow')}`}</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case tracking-normal shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" /> {t('wx.live')}
-                </span>
-              </div>
-              {!wd ? (
-                <p className="mt-4 mb-2 text-sm text-white/80 flex items-center gap-2">
-                  {wx.status === 'error' ? t('wx.error') : t('wx.loading')}
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mt-2">
-                    <div>
-                      <div className="text-5xl font-light tracking-tight">{fmt(wd.current.temp)}°C</div>
-                      <div className="text-sm text-white/75">
-                        {t('cond.' + conditionFromCode(wd.current.code))} · {t('dash.high')} {fmt(wd.daily[0]?.hi)}° / {t('dash.low')} {fmt(wd.daily[0]?.lo)}°
-                      </div>
-                    </div>
-                    <WeatherIcon cond={conditionFromCode(wd.current.code)} size={52} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
-                    {[
-                      [Droplets, `${fmt(wd.current.humidity)}%`, t('dash.humidity')],
-                      [CloudRain, `${fmt(wd.daily[0]?.prob)}%`, t('wx.rain24')],
-                      [Wind, `${fmt(wd.daily[0]?.mm, 1)} ${t('weather.mm')}`, t('wx.rainMm')],
-                    ].map(([I, v, l]) => (
-                      <div key={l} className="rounded-xl bg-white/10 px-2.5 py-2">
-                        <I size={15} className="text-white/70" aria-hidden />
-                        <div className="font-semibold mt-0.5">{v}</div>
-                        <div className="text-[11px] text-white/65 truncate">{l}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-3 text-sm text-white/90 border-t border-white/10 pt-3">
-                    <span className={`inline-block rounded-full px-2 py-0.5 mr-1.5 text-xs font-semibold ${ADVICE_CHIP[wx.decision.tone]}`}>{t(`wx.status.${wx.decision.status}`)}</span>
-                    {t(`wx.reason.${wx.decision.status}`)}
-                  </p>
-                </>
-              )}
-            </Link>
-
-            {/* Lead crop glass card */}
-            {lead && (
-              <Link to="/crops" className="glass-card block hover:bg-emerald-950/70 transition">
-                <div className="relative">
-                  <Photo id="photo-1592982537447-7440770cbfc9" className="h-28 rounded-xl" />
-                  <span className="absolute inset-0 grid place-items-center">
-                    <span className="h-10 w-10 rounded-full bg-white/30 backdrop-blur grid place-items-center"><Sprout size={20} /></span>
-                  </span>
-                </div>
-                <div className="mt-3 text-lg">{L(lead.cat.name)}</div>
-                <div className="text-sm text-white/75">{t('dash.stage')}: {L(lead.stage)}</div>
-                <div className="mt-2 h-1.5 rounded-full bg-white/15 overflow-hidden">
-                  <div className="h-full rounded-full bg-yellow-400" style={{ width: `${lead.progress}%` }} />
-                </div>
-                <div className="mt-1.5 text-xs text-white/65">{lead.daysToHarvest} {t('common.daysLeft')}</div>
-              </Link>
-            )}
-          </div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16 space-y-16 md:space-y-20">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 space-y-8 md:space-y-10">
+        <QuickActions />
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6 items-start">
+          <WeatherCard wx={wx} />
+          <ActiveCrops />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* ───────────── Your farm today + stats ───────────── */}
-        <section>
-          <div className="grid lg:grid-cols-[1fr_1.6fr] gap-6 items-start">
-            <div><SectionBadge>{t('sec.farm')}</SectionBadge></div>
-            <h2 className="display text-3xl md:text-5xl text-forest-900">{t('sec.farmTitle')}</h2>
-          </div>
-          <div className="h-px bg-black/[0.08] my-8 md:my-10" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <div className="text-4xl md:text-5xl font-normal tracking-tight text-forest-900">
-                  {s.v}
-                  {s.unit && <span className="text-lg text-forest-600/70 ml-1.5">{s.unit}</span>}
-                </div>
-                <div className="mt-1 text-forest-600/80">{s.label}</div>
-              </div>
-            ))}
-          </div>
+function QuickActions() {
+  const { t } = useApp();
+  return (
+    <section aria-labelledby="home-quick">
+      <h2 id="home-quick" className="text-lg font-semibold text-forest-900 mb-3">{t('dash.quickActions')}</h2>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {QUICK.map(({ to, key, sub, icon: Icon, tone }) => (
+          <Link key={to} to={to} className="card p-4 md:p-5 flex items-center gap-3 hover:shadow-lift transition min-h-[84px]">
+            <span className={`h-12 w-12 rounded-2xl grid place-items-center shrink-0 ${tone}`}><Icon size={24} /></span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-forest-900 leading-tight">{t(key)}</span>
+              <span className="hidden sm:block text-xs text-forest-600 mt-0.5">{t(sub)}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-          {topAlert && (
-            <Link to="/weather" className="mt-10 flex items-start gap-3 rounded-2xl bg-white border border-black/[0.05] p-4 hover:border-clay-500/40 transition">
-              <span className="h-10 w-10 rounded-full bg-clay-100 text-clay-600 grid place-items-center shrink-0"><AlertTriangle size={20} /></span>
-              <div className="min-w-0">
-                <div className="font-semibold text-forest-900">{topAlert.title}</div>
-                <p className="text-forest-600/90">{topAlert.body}</p>
-              </div>
-              <ArrowRight size={18} className="ml-auto shrink-0 text-forest-500 mt-2" />
-            </Link>
-          )}
-        </section>
+function WeatherCard({ wx }) {
+  const { t, lang } = useApp();
+  const wd = wx.data;
+  const near = wx.source === 'gps' ? savedPlaceNear(wx.coords) : null;
+  const place = near ? near.city || near.label : wx.source === 'gps' ? '' : t('wx.locDefault').split(' (')[0];
+  const alerts = wx.alerts.slice(0, 3).map((a) => ({ a, ...alertText(a, t, lang) }));
 
-        {/* ───────────── Tasks · Market · Schemes ───────────── */}
-        <section className="grid lg:grid-cols-3 gap-5">
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-medium text-forest-900">{t('dash.upcoming')}</h3>
-              <MoreLink to="/calendar">{t('common.viewAll')}</MoreLink>
-            </div>
-            <ul className="space-y-2">
-              {upcoming.map((tk) => (
-                <li key={tk.id} className="flex items-center gap-2 rounded-xl bg-cream-100 pr-3 min-h-[56px]">
-                  <button
-                    onClick={() => {
-                      toggleTask(tk.id);
-                      toast(t('calendar.completed'));
-                    }}
-                    aria-label={t('common.done')}
-                    className="h-11 w-11 grid place-items-center text-emerald-600 shrink-0"
-                  >
-                    <Circle size={22} />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-forest-900 truncate">{L(tk.title)}</div>
-                    <div className="text-xs text-forest-600/80">{tk.date === today ? t('common.today') : fmtDate(tk.date, lang)}</div>
-                  </div>
-                  <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${categoryStyle[tk.category].dot}`} aria-hidden />
-                </li>
-              ))}
-              {upcoming.length === 0 && <li className="text-forest-600/70 py-4 text-center">{t('calendar.noTasks')}</li>}
-            </ul>
-          </div>
-
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-medium text-forest-900">{t('dash.marketSnap')}</h3>
-              <MoreLink to="/market">{t('common.viewAll')}</MoreLink>
-            </div>
-            <div className="flex items-end justify-between">
+  return (
+    <section className="space-y-3">
+      <Link to="/weather" className="block rounded-3xl bg-gradient-to-br from-[#12324a] to-[#0b3b24] text-white p-5 md:p-6 hover:opacity-95 transition">
+        <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-white/70">
+          <span className="truncate">{place ? `${place} · ` : ''}{t('dash.weatherNow')}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case tracking-normal shrink-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" /> {t('wx.live')}
+          </span>
+        </div>
+        {!wd ? (
+          <p className="mt-4 mb-2 text-sm text-white/80">{wx.status === 'error' ? t('wx.error') : t('wx.loading')}</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mt-2">
               <div>
-                <div className="text-sm text-forest-600/80">{L(local.name)}</div>
-                <div className="text-4xl font-normal tracking-tight text-forest-900">₹{fmtNum(local.modal, lang)}</div>
-                <div className="text-xs text-forest-600/80">{t('market.perQ')}</div>
+                <div className="text-5xl font-light tracking-tight">{fmt(wd.current.temp)}°C</div>
+                <div className="text-sm text-white/75">
+                  {t('cond.' + conditionFromCode(wd.current.code))} · {t('dash.high')} {fmt(wd.daily[0]?.hi)}° / {t('dash.low')} {fmt(wd.daily[0]?.lo)}°
+                </div>
               </div>
-              <Badge tone={local.change >= 0 ? 'green' : 'red'}>
-                {local.change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} ₹{Math.abs(local.change)}
-              </Badge>
+              <WeatherIcon cond={conditionFromCode(wd.current.code)} size={56} />
             </div>
-            <div className="h-16 -mx-1 mt-2" aria-hidden>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={ragiSeries}>
-                  <defs>
-                    <linearGradient id="sp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#059669" stopOpacity={0.3} />
-                      <stop offset="1" stopColor="#059669" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="modal" stroke="#059669" strokeWidth={2.5} fill="url(#sp)" dot={false} isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <ul className="mt-2 divide-y divide-black/[0.06]">
-              {ragiPrices.slice(0, 3).map((p, i) => (
-                <li key={p.id} className="flex justify-between py-2 text-sm">
-                  <span className="text-forest-800">{i === 0 && '★ '}{L(p.name)}</span>
-                  <span className="font-semibold text-forest-900">₹{fmtNum(p.modal, lang)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-medium text-forest-900">{t('dash.schemesForYou')}</h3>
-              <MoreLink to="/schemes">{t('common.viewAll')}</MoreLink>
-            </div>
-            <ul className="space-y-2.5">
-              {matched.map((s) => (
-                <li key={s.id}>
-                  <Link to={`/schemes?open=${s.id}`} className="block rounded-xl bg-cream-100 hover:bg-emerald-50 p-3 transition">
-                    <div className="font-medium text-forest-900">{L(s.name)}</div>
-                    <div className="text-sm text-forest-600/80 line-clamp-2">{L(s.benefit)}</div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* ───────────── Active crops ───────────── */}
-        <section>
-          <div className="flex items-end justify-between gap-4 mb-5">
-            <div>
-              <SectionBadge>{t('dash.activeCrops')}</SectionBadge>
-            </div>
-            <MoreLink to="/crops">{t('common.viewAll')}</MoreLink>
-          </div>
-          <div className="flex gap-4 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4 md:mx-0 md:px-0 snap-x">
-            {crops.map((c) => (
-              <Link key={c.id} to="/crops" className="card shrink-0 w-72 snap-start p-3 hover:shadow-lift transition">
-                <CropArt type={c.cat.art} className="h-36 w-full rounded-xl" />
-                <div className="px-1 pt-3 pb-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-medium text-lg text-forest-900 truncate">{L(c.cat.name)}</h3>
-                    <Badge tone={c.health === 'healthy' ? 'green' : 'amber'}>
-                      {c.health === 'healthy' ? t('crops.healthy') : t('crops.watch')}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-forest-600/80">{t('dash.stage')}: {L(c.stage)}</p>
-                  <div className="mt-3"><ProgressBar value={c.progress} tone="bg-emerald-600" /></div>
-                  <p className="text-xs text-forest-600/80 mt-1.5">{c.daysToHarvest} {t('common.daysLeft')}</p>
+            <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
+              {[
+                [Droplets, `${fmt(wd.current.humidity)}%`, t('dash.humidity')],
+                [CloudRain, `${fmt(wd.daily[0]?.prob)}%`, t('wx.rain24')],
+                [Wind, `${fmt(wd.daily[0]?.mm, 1)} ${t('weather.mm')}`, t('wx.rainMm')],
+              ].map(([I, v, l]) => (
+                <div key={l} className="rounded-xl bg-white/10 px-2.5 py-2">
+                  <I size={15} className="text-white/70" aria-hidden />
+                  <div className="font-semibold mt-0.5">{v}</div>
+                  <div className="text-[11px] text-white/65 truncate">{l}</div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+            <p className="mt-4 text-sm text-white/90 border-t border-white/10 pt-3">
+              <span className={`inline-block rounded-full px-2 py-0.5 mr-1.5 text-xs font-semibold ${ADVICE_CHIP[wx.decision.tone]}`}>{t(`wx.status.${wx.decision.status}`)}</span>
+              {t(`wx.reason.${wx.decision.status}`)}
+            </p>
+          </>
+        )}
+      </Link>
 
-        {/* ───────────── Services (6 core tabs) ───────────── */}
-        <section>
-          <div className="text-center">
-            <SectionBadge>{t('sec.services')}</SectionBadge>
-            <h2 className="display text-3xl md:text-5xl text-forest-900 mt-4 max-w-2xl mx-auto">{t('sec.servicesTitle')}</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
-            {SERVICES.map((s) => (
-              <Link key={s.to} to={s.to} className="group card p-3 hover:shadow-lift transition">
-                <Photo id={s.photo} className="h-48 rounded-xl" />
-                <div className="px-1.5 pt-4 pb-2 flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-medium text-forest-900">{t(s.k)}</h3>
-                    <p className="text-forest-600/85 mt-1">{t(s.d)}</p>
-                  </div>
-                  <span className="h-10 w-10 shrink-0 rounded-full bg-cream-100 group-hover:bg-emerald-600 group-hover:text-white text-forest-800 grid place-items-center transition">
-                    <ArrowUpRight size={18} />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {alerts.map(({ a, title, body }) => (
+        <Link key={`${a.type}-${a.day.date}`} to="/weather" role="alert" className="flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 p-4 hover:border-red-300 transition">
+          <span className="h-10 w-10 rounded-full bg-red-100 text-red-600 grid place-items-center shrink-0"><AlertTriangle size={20} /></span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-red-900">{title}</span>
+            <span className="block text-sm text-red-900/80">{body}</span>
+          </span>
+        </Link>
+      ))}
+    </section>
+  );
+}
+
+function ActiveCrops() {
+  const { t, L, lang } = useApp();
+  const crops = useCropViews();
+  return (
+    <section className="card p-5 md:p-6">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-lg font-semibold text-forest-900 flex items-center gap-2"><Sprout size={20} className="text-emerald-600" /> {t('home.crops.title')}</h2>
+        {crops.length > 0 && (
+          <Link to="/crops" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-600 min-h-[40px]">
+            {t('common.viewAll')} <ArrowRight size={15} />
+          </Link>
+        )}
       </div>
 
-      {/* ───────────── Closing band ───────────── */}
-      <section className="relative overflow-hidden text-white lg:mx-8 lg:mb-8 lg:rounded-3xl">
-        <AerialFields seed={21} className="absolute inset-0 h-full w-full" />
-        <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-24 text-center">
-          <SectionBadge glass>{t('sec.closingBadge')}</SectionBadge>
-          <h2 className="display text-4xl md:text-6xl mt-5">{t('sec.closingTitle')}</h2>
-          <button onClick={() => ask(L(demoQuestion))} className="btn-primary mt-7">
-            {t('hero.cta')} <ArrowRight size={18} />
-          </button>
-          <div className="glass-card mt-10 text-left">
-            <div className="text-xs uppercase tracking-wider text-white/70 mb-3">{t('dash.journey')} · {t('dash.journeyHint')}</div>
-            <ol className="flex flex-wrap gap-2">
-              {JOURNEY.map((to, i) => (
-                <li key={to}>
-                  <Link to={to} className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 px-3.5 min-h-[40px] text-sm">
-                    <span className="h-5 w-5 rounded-full bg-yellow-400 text-emerald-950 text-xs font-semibold grid place-items-center">{i + 1}</span>
-                    {t(JOURNEY_KEYS[i])}
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </div>
+      {crops.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-forest-700">{t('home.crops.empty')}</p>
+          <Link to="/crops" className="btn-primary mt-4 inline-flex"><Plus size={18} /> {t('fld.add')}</Link>
         </div>
-      </section>
-    </div>
+      ) : (
+        <ul className="space-y-4">
+          {crops.map((c) => {
+            const idx = phaseIndex(c);
+            return (
+              <li key={c.id} className="rounded-2xl border border-black/[0.06] p-3 md:p-4">
+                <div className="flex items-center gap-3">
+                  <CropArt type={c.cat?.art || 'ragi'} className="h-14 w-14 rounded-xl shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-forest-900 truncate">{fieldLabel(c, t, L)}</div>
+                    <div className="text-xs text-forest-600">
+                      {t(dateLabelKey(c.cropId))}: {fmtDate(c.sowDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div className="text-sm text-forest-700 mt-0.5">{t('dash.stage')}: <b>{L(c.stage)}</b></div>
+                  </div>
+                  <div className="text-right shrink-0 text-xs text-forest-600">
+                    {c.perennial ? t('kb.yearRound') : c.elapsed < 0 ? t('sch.sowIn', { n: c.sowIn }) : `${c.daysToHarvest} ${t('common.daysLeft')}`}
+                  </div>
+                </div>
+                {c.perennial ? (
+                  <p className="mt-3 text-xs rounded-xl bg-emerald-50 text-emerald-800 px-3 py-2">{t('home.crops.perennial')}</p>
+                ) : (
+                  <ol className="mt-3 grid grid-cols-4 gap-1" aria-label={t('crops.progress')}>
+                    {PHASES.map((ph, i) => (
+                      <li key={ph} className="min-w-0">
+                        <div className={`h-2 rounded-full ${i < idx ? 'bg-emerald-600' : i === idx ? 'bg-yellow-400' : 'bg-cream-200'}`} />
+                        <div className={`mt-1 text-[11px] truncate ${i === idx ? 'font-semibold text-forest-900' : 'text-forest-600'}`}>{t(`home.ph.${ph}`)}</div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

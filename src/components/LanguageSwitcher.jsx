@@ -8,7 +8,7 @@ export default function LanguageSwitcher({ variant = 'light', className = '' }) 
     <div
       role="radiogroup"
       aria-label={t('common.language')}
-      className={`inline-flex rounded-full p-1 ${dark ? 'bg-white/15' : 'bg-white border border-cream-300'} ${className}`}
+      className={`inline-flex rounded-lg p-1 ${dark ? 'bg-white/15' : 'bg-white border border-cream-300'} ${className}`}
     >
       {LANGUAGES.map((l) => {
         const on = lang === l.code;
@@ -18,7 +18,7 @@ export default function LanguageSwitcher({ variant = 'light', className = '' }) 
             role="radio"
             aria-checked={on}
             onClick={() => on || setLang(l.code)}
-            className={`min-h-[40px] min-w-[38px] sm:min-w-[44px] px-2 sm:px-3 rounded-full text-sm font-bold transition ${
+            className={`min-h-[40px] min-w-[38px] sm:min-w-[44px] px-2 sm:px-3 rounded-md text-sm font-bold transition ${
               on
                 ? dark
                   ? 'bg-cream-50 text-forest-800'

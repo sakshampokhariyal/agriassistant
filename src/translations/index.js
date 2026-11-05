@@ -14,16 +14,18 @@ import news from './news';
 import cropMaster from './cropMaster';
 import vision from './vision';
 import location from './location';
+import nearby from './nearby';
+import kb from './kb';
 import { APP_NAME } from '../config/brand';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English', short: 'EN', locale: 'en-IN' },
-  { code: 'hi', label: 'हिन्दी', short: 'हिं', locale: 'hi-IN' },
   { code: 'kn', label: 'ಕನ್ನಡ', short: 'ಕ', locale: 'kn-IN' },
+  { code: 'hi', label: 'हिन्दी', short: 'हिं', locale: 'hi-IN' },
 ];
 
 /** Feature modules keep their own string tables; they are merged into one dictionary per language. */
-const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location];
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location, nearby, kb];
 export const dictionaries = Object.fromEntries(
   Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
 );

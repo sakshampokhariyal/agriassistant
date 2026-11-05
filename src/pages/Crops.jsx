@@ -7,9 +7,10 @@ import {
 import { useApp } from '../context/AppContext';
 import { useWeather } from '../context/WeatherContext';
 import { scheduleParams } from '../data/cropSchedules';
-import { cropRecommendations } from '../data/cropMasterData';
+import { cropRecommendations, CROP_CATEGORIES } from '../data/cropMasterData';
+import { buildSchedule } from '../utils/cropSchedule';
 import useCropViews from '../hooks/useCropViews';
-import { cropCatalog, irrigationOptions, soilOptions } from '../data/farmer';
+import { cropCatalog, dateLabelKey, irrigationOptions, soilOptions } from '../data/farmer';
 import { fmtDate, todayISO } from '../utils/date';
 import { fieldLabel } from '../utils/fields';
 import { Badge, EmptyState, Field, PageHeader, ProgressBar, SectionTitle } from '../components/ui';
@@ -91,15 +92,22 @@ function FieldDetail({ field, onEdit, onRemove }) {
         </div>
 
         <div className="mt-4"><ProgressBar value={field.progress} tone="bg-emerald-600" /></div>
-        <div className="mt-1.5 flex justify-between text-xs text-forest-600">
-          <span>{t('crops.sown')}: {fmtDate(field.sowDate, lang)}</span>
-          <span>{field.elapsed >= 0 ? `${t('crops.advice.dayOf', { n: Math.min(field.elapsed, field.duration), d: field.duration })} · ` : ''}{field.daysToHarvest} {t('common.daysLeft')}</span>
-          <span>{t('crops.harvest')}: {fmtDate(field.harvestDate, lang)}</span>
-        </div>
+        {field.perennial ? (
+          <div className="mt-1.5 flex justify-between text-xs text-forest-600">
+            <span>{t('kb.planted')}: {fmtDate(field.sowDate, lang, { month: 'short', year: 'numeric' })}</span>
+            <span>{t('kb.yearRound')} · {t('kb.yearProgress')}</span>
+          </div>
+        ) : (
+          <div className="mt-1.5 flex justify-between text-xs text-forest-600">
+            <span>{t('crops.sown')}: {fmtDate(field.sowDate, lang)}</span>
+            <span>{field.elapsed >= 0 ? `${t('crops.advice.dayOf', { n: Math.min(field.elapsed, field.duration), d: field.duration })} · ` : ''}{field.daysToHarvest} {t('common.daysLeft')}</span>
+            <span>{t('crops.harvest')}: {fmtDate(field.harvestDate, lang)}</span>
+          </div>
+        )}
 
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
           <Info icon={Ruler} label={t('fld.area')} value={`${field.acres} ${t('common.acres')}`} />
-          <Info icon={CalendarDays} label={t('crops.sowDate')} value={fmtDate(field.sowDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })} />
+          <Info icon={CalendarDays} label={t(dateLabelKey(field.cropId))} value={fmtDate(field.sowDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })} />
           <Info icon={Mountain} label={t('profile.soil')} value={t(`opt.soil.${field.soil || 'red'}`)} />
           <Info icon={Droplets} label={t('fld.irrigation')} value={t(`opt.irr.${field.irrigation || 'rainfed'}`)} />
         </dl>
@@ -131,10 +139,21 @@ function StageAdvice({ field }) {
   const { t, L } = useApp();
   const weather = useWeather();
   const params = scheduleParams(field);
-  const recs = cropRecommendations(field.cropId, params);
   const day = field.elapsed;
-  const active = recs.filter((r) => day >= r.from && day <= r.to);
-  const next = recs.filter((r) => r.from > day).sort((a, b) => a.from - b.from)[0];
+  let recs = cropRecommendations(field.cropId, params);
+  let active;
+  let next;
+  if (recs.length) {
+    active = recs.filter((r) => day >= r.from && day <= r.to);
+    next = recs.filter((r) => r.from > day).sort((a, b) => a.from - b.from)[0];
+  } else {
+    // Knowledge-base crops: the advice is the crop calendar's own tasks (due now, then the next one).
+    const plan = buildSchedule(field);
+    const kind = (x) => (x.priority === 'critical' ? 'critical' : x.type === 'harvest' ? 'harvest' : x.type === 'protection' ? 'pest' : 'action');
+    const asRec = (x) => ({ key: x.id, kind: kind(x), text: { en: `${x.title.en} – ${x.detail.en}`, hi: `${x.title.hi} – ${x.detail.hi}`, kn: `${x.title.kn} – ${x.detail.kn}` }, from: day + x.inDays });
+    active = (plan?.dueToday || []).map(asRec);
+    next = plan?.next ? asRec(plan.next) : null;
+  }
 
   const d0 = weather?.data?.daily?.[0];
   const hints = [];
@@ -145,7 +164,7 @@ function StageAdvice({ field }) {
     <>
       <SectionTitle icon={Lightbulb}>{t('crops.advice.title')}</SectionTitle>
       <p className="text-sm text-forest-700 -mt-1 mb-2">
-        {day < 0 ? t('crops.advice.notSown', { n: -day }) : t('crops.advice.dayStage', { n: day, stage: L(field.stage) })}
+        {day < 0 ? t('crops.advice.notSown', { n: -day }) : field.perennial ? t('kb.seasonNow', { season: L(field.stage) }) : t('crops.advice.dayStage', { n: day, stage: L(field.stage) })}
       </p>
       <ul className="space-y-2">
         {active.map((r) => {
@@ -201,7 +220,7 @@ function CombinedOverview({ views }) {
     views.forEach((v) => (m[v.cropId] = (m[v.cropId] || 0) + Number(v.acres || 0)));
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }, [views]);
-  const next = [...views].sort((a, b) => a.daysToHarvest - b.daysToHarvest)[0];
+  const next = views.filter((v) => !v.perennial).sort((a, b) => a.daysToHarvest - b.daysToHarvest)[0];
   const attention = views.filter((v) => v.health !== 'healthy');
 
   return (
@@ -286,14 +305,21 @@ function FieldModal({ open, field, onClose, onSave }) {
         </Field>
         <Field label={t('crops.selectCrop')}>
           <select className="input" value={f.cropId} onChange={set('cropId')}>
-            {Object.values(cropCatalog).map((c) => <option key={c.id} value={c.id}>{L(c.name)}</option>)}
+            {CROP_CATEGORIES.map((cat) => {
+              const list = Object.values(cropCatalog).filter((c) => c.category === cat);
+              return list.length ? (
+                <optgroup key={cat} label={t(`kb.cat.${cat}`)}>
+                  {list.map((c) => <option key={c.id} value={c.id}>{L(c.name)}</option>)}
+                </optgroup>
+              ) : null;
+            })}
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={`${t('fld.area')} (${t('common.acres')})`}>
             <input className="input" type="number" min="0.1" step="0.1" inputMode="decimal" value={f.acres} onChange={set('acres')} />
           </Field>
-          <Field label={t('crops.sowDate')}>
+          <Field label={t(dateLabelKey(f.cropId))}>
             <input className="input" type="date" value={f.sowDate} onChange={set('sowDate')} />
           </Field>
         </div>

@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
-import { cropCatalog } from '../../data/farmer';
+import { cropCatalog, dateLabelKey } from '../../data/farmer';
 import { buildSchedule, EXPENSE_CATEGORIES } from '../../utils/cropSchedule';
 import { fmtDate, fmtNum, todayISO } from '../../utils/date';
 import { fieldLabel } from '../../utils/fields';
@@ -135,18 +135,28 @@ function CropHeader({ field, plan, onUpdate }) {
             {fieldLabel(field, t, L, { withCrop: false })} · {cropName} <span className="text-sm font-normal italic text-forest-600">({schedule.sci})</span>
           </h2>
           <p className="text-sm text-forest-700 mt-1">
-            {t('sch.duration', { range: params.range })} · {t(plan.transplanted ? 'sch.transplanted' : 'sch.direct')}
+            {plan.perennial ? t('kb.perennialNote') : <>{t('sch.duration', { range: params.range })} · {t(plan.transplanted ? 'sch.transplanted' : schedule.dateIsTransplant ? 'kb.fromTransplant' : 'sch.direct')}</>}
           </p>
-          <p className="text-xs text-forest-600 mt-0.5">{t('sch.varieties', { v: params.examples })}</p>
+          {params.examples && <p className="text-xs text-forest-600 mt-0.5">{t('sch.varieties', { v: params.examples })}</p>}
+          {params.spacing && variants.length === 1 && <p className="text-xs text-forest-600 mt-0.5">{t('kb.spacing', { v: params.spacing })}</p>}
         </div>
         <label className="block shrink-0">
-          <span className="label">{t(plan.transplanted ? 'sch.nurseryDate' : 'sch.sowDate')}</span>
+          <span className="label">{t(plan.transplanted ? 'sch.nurseryDate' : dateLabelKey(field.cropId) === 'crops.sowDate' ? 'sch.sowDate' : dateLabelKey(field.cropId))}</span>
           <input type="date" className="input !min-h-[44px]" value={field.sowDate} onChange={(e) => e.target.value && onUpdate({ sowDate: e.target.value })} />
         </label>
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
-        {das < 0 ? (
+        {plan.perennial ? (
+          plan.age < 0 ? (
+            <span className="chip chip-on !min-h-[36px] text-sm">{t('sch.sowIn', { n: -plan.age })}</span>
+          ) : (
+            <>
+              <span className="chip chip-on !min-h-[36px] text-sm">{t('kb.yearN', { n: Math.floor(plan.age / 365) + 1 })}</span>
+              {plan.currentPhase && <span className="chip chip-off !min-h-[36px] text-sm">{t('kb.seasonChip')}: {L(plan.currentPhase.name)}</span>}
+            </>
+          )
+        ) : das < 0 ? (
           <span className="chip chip-on !min-h-[36px] text-sm">{t('sch.sowIn', { n: -das })}</span>
         ) : (
           <>
@@ -155,8 +165,15 @@ function CropHeader({ field, plan, onUpdate }) {
             {plan.currentPhase && <span className="chip chip-off !min-h-[36px] text-sm">{t('sch.phaseNow')}: {L(plan.currentPhase.name)}</span>}
           </>
         )}
-        <span className="chip chip-off !min-h-[36px] text-sm"><CalendarDays size={14} /> {t('sch.harvestOn', { date: fmtDate(plan.harvestDate, lang, { day: 'numeric', month: 'short', year: 'numeric' }) })}</span>
+        {plan.harvestDate && <span className="chip chip-off !min-h-[36px] text-sm"><CalendarDays size={14} /> {t('sch.harvestOn', { date: fmtDate(plan.harvestDate, lang, { day: 'numeric', month: 'short', year: 'numeric' }) })}</span>}
       </div>
+
+      {plan.routines?.map((r) => (
+        <div key={r.key} className="mt-4 rounded-2xl bg-sky-50 border border-sky-200 p-3 text-sm text-forest-800">
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-sky-800">{t('kb.routine')} · {L(r.title)}</span>
+          {L(r.detail)}
+        </div>
+      ))}
 
       {variants.length > 1 && (
         <div className="mt-4">
@@ -212,7 +229,7 @@ function Timeline({ plan }) {
               <div className="flex items-start gap-1.5 text-sm font-semibold text-forest-900 leading-snug">
                 <span className="h-2.5 w-2.5 rounded-full shrink-0 mt-1" style={{ background: PHASE_COLORS[i % PHASE_COLORS.length] }} /> {L(ph.name)}
               </div>
-              <div className="text-[11px] text-forest-600 mt-0.5">{t('sch.dayRange', { a: Math.max(0, ph.start), b: ph.end - 1 })}</div>
+              {!plan.perennial && <div className="text-[11px] text-forest-600 mt-0.5">{t('sch.dayRange', { a: Math.max(0, ph.start), b: ph.end - 1 })}</div>}
               <div className="text-[11px] text-forest-600">{fmtDate(ph.startDate, lang)} – {fmtDate(ph.endDate, lang)}</div>
               {cur && <div className="text-[11px] font-semibold text-emerald-700 mt-0.5">{t('cc.current')}</div>}
             </li>
@@ -225,6 +242,8 @@ function Timeline({ plan }) {
 
 function PhaseGroups({ plan, tasks, onToggle }) {
   const { L } = useApp();
+  // Plantation tasks span several years, so they read best as one dated list.
+  if (plan.perennial) return <ul className="space-y-2">{tasks.map((x) => <TaskItem key={x.id} x={x} onToggle={onToggle} />)}</ul>;
   return (
     <div className="space-y-4">
       {plan.phases.map((ph) => {
@@ -246,7 +265,11 @@ function TaskItem({ x, onToggle }) {
   const done = x.status === 'done';
   const ts = TYPE_STYLE[x.type] || TYPE_STYLE.other;
   const dates = x.start === x.end ? fmtDate(x.start, lang, { weekday: 'short', day: 'numeric', month: 'short' }) : `${fmtDate(x.start, lang)} – ${fmtDate(x.end, lang)}`;
-  const days = x.startDay === x.endDay ? t('sch.day', { n: x.startDay }) : t('sch.dayRange', { a: x.startDay, b: x.endDay });
+  const days = x.everyDays
+    ? t('kb.everyDays', { n: x.everyDays })
+    : x.months
+      ? fmtDate(x.start, lang, { month: 'short', year: 'numeric' }) + (x.months.length > 1 ? ` – ${fmtDate(x.end, lang, { month: 'short', year: 'numeric' })}` : '')
+      : x.startDay === x.endDay ? t('sch.day', { n: x.startDay }) : t('sch.dayRange', { a: x.startDay, b: x.endDay });
   return (
     <li className={`flex items-start gap-2 rounded-2xl border px-2 py-2 ${done ? 'bg-cream-100/70 border-transparent' : x.status === 'today' ? 'bg-amber-50/60 border-amber-200' : 'bg-white border-black/[0.06]'}`}>
       <button onClick={() => onToggle(x)} aria-pressed={done} aria-label={done ? t('calendar.reopened') : t('calendar.completed')} className="h-11 w-11 shrink-0 grid place-items-center text-emerald-600">
@@ -263,7 +286,7 @@ function TaskItem({ x, onToggle }) {
         <div className={`font-semibold leading-snug mt-1 ${done ? 'line-through text-forest-500' : 'text-forest-900'}`}>{L(x.title)}</div>
         {!done && <p className="text-sm text-forest-700 mt-0.5">{L(x.detail)}</p>}
         <div className="text-xs text-forest-600 mt-1">
-          {days}{x.dapStart != null ? ` · ${t('sch.dapShort', { n: x.dapStart })}` : ''} · {dates}
+          {days}{x.dapStart != null ? ` · ${t('sch.dapShort', { n: x.dapStart })}` : ''}{x.months ? '' : ` · ${dates}`}
         </div>
       </div>
       <span className={`text-xs font-semibold rounded-full px-2.5 py-1 shrink-0 mt-1 ${STATUS_STYLE[x.status]}`}>{t(`sch.st.${x.status}`)}</span>

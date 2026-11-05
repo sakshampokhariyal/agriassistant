@@ -6,7 +6,8 @@
  * Status: 'done' | 'today' (today falls inside the task window) | 'overdue' | 'upcoming'.
  */
 import { cropSchedules, scheduleParams } from '../data/cropSchedules';
-import { addDaysTo, daysBetween, todayISO } from './date';
+import { SEASONS, STAGE_NAMES, seasonForMonth } from '../data/cropMasterData';
+import { addDaysTo, daysBetween, todayISO, toISO, parseISO } from './date';
 
 export const EXPENSE_CATEGORIES = ['seed', 'fertilizer', 'pesticide', 'labour', 'irrigation', 'machinery', 'other'];
 const PRIORITY_RANK = { critical: 0, high: 1, normal: 2 };
@@ -51,6 +52,98 @@ function expand(field, p) {
   return out;
 }
 
+const ymd = (y, m, d) => toISO(new Date(y, m - 1, d));
+const lastDay = (y, m) => new Date(y, m, 0).getDate();
+
+/**
+ * Perennial plantations (coconut, rubber, pepper) follow the calendar, not a sowing day:
+ * month tasks recur every year, `repeating` tasks recur every N days from the planting date,
+ * and the "phases" are the seasons of the current year (bounds in day-of-year, Jan 1 = 0).
+ */
+function buildPerennial(field, s, p, doneMap, today) {
+  const t = parseISO(today);
+  const Y = t.getFullYear();
+  const jan1 = ymd(Y, 1, 1);
+  const doy = (iso) => daysBetween(jan1, iso);
+  const age = daysBetween(field.sowDate, today);
+  // Keep a short look-back so a task done a little late is still on the list, and a year ahead.
+  const from = addDaysTo(today, -30);
+  const until = addDaysTo(today, 365);
+
+  const phases = SEASONS.map((x) => {
+    const startDate = ymd(Y, x.months[0], 1);
+    const lm = x.months[x.months.length - 1];
+    const endDate = ymd(Y, lm, lastDay(Y, lm));
+    return { key: x.key, name: STAGE_NAMES[x.key], start: doy(startDate), end: doy(endDate) + 1, startDate, endDate };
+  });
+  const seasonOf = (iso) => seasonForMonth(parseISO(iso).getMonth() + 1);
+  const currentPhase = phases.find((ph) => ph.key === seasonOf(today));
+
+  const raw = [];
+  (s.tasks || []).forEach((tpl) => {
+    const m0 = tpl.months[0];
+    const mN = tpl.months[tpl.months.length - 1];
+    const wraps = mN < m0; // e.g. Dec–Mar
+    for (let y = Y - 1; y <= Y + 1; y++) {
+      const start = ymd(y, m0, 1);
+      const ey = wraps ? y + 1 : y;
+      const end = ymd(ey, mN, lastDay(ey, mN));
+      if (end < from || start > until || end < field.sowDate) continue;
+      raw.push({ tpl, id: `${tpl.key}@${y}`, start, end, months: tpl.months });
+    }
+  });
+  (s.repeating || []).forEach((tpl) => {
+    const first = Math.max(1, Math.ceil(daysBetween(field.sowDate, from) / tpl.everyDays));
+    for (let n = first; ; n++) {
+      const start = addDaysTo(field.sowDate, n * tpl.everyDays);
+      if (start > until) break;
+      raw.push({ tpl, id: `${tpl.key}#${n}`, start, end: addDaysTo(start, 2), everyDays: tpl.everyDays });
+    }
+  });
+
+  const tasks = raw
+    .map(({ tpl, ...x }) => {
+      const status = doneMap[x.id] ? 'done' : today >= x.start && today <= x.end ? 'today' : today > x.end ? 'overdue' : 'upcoming';
+      return {
+        ...x,
+        key: tpl.key,
+        type: tpl.type,
+        priority: tpl.priority,
+        title: tpl.title,
+        detail: tpl.detail,
+        fieldId: field.id,
+        cropId: field.cropId,
+        startDay: daysBetween(field.sowDate, x.start),
+        endDay: daysBetween(field.sowDate, x.end),
+        dapStart: null,
+        inDays: daysBetween(today, x.start),
+        status,
+        phaseKey: seasonOf(x.start),
+        perennial: true,
+      };
+    })
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]));
+
+  return {
+    params: p,
+    schedule: s,
+    perennial: true,
+    age,
+    das: doy(today),
+    dap: null,
+    transplanted: false,
+    harvestDate: null,
+    phases,
+    currentPhase,
+    tasks,
+    constraints: [],
+    routines: s.routines || [],
+    today: tasks.filter((x) => x.status === 'today'),
+    dueToday: tasks.filter((x) => today >= x.start && today <= x.end),
+    next: tasks.find((x) => x.status === 'upcoming') || null,
+  };
+}
+
 /**
  * Full plan for a field.
  * doneMap: { [taskId]: true } for this field.
@@ -59,6 +152,7 @@ export function buildSchedule(field, doneMap = {}, today = todayISO()) {
   const p = scheduleParams(field);
   if (!p || !field.sowDate) return null;
   const s = cropSchedules[field.cropId];
+  if (s.perennial) return buildPerennial(field, s, p, doneMap, today);
   const das = daysBetween(field.sowDate, today);
   const transplanted = s.establishment === 'transplant';
   const dap = transplanted && das >= p.T ? das - p.T : null;
@@ -100,6 +194,7 @@ export function buildSchedule(field, doneMap = {}, today = todayISO()) {
     currentPhase,
     tasks,
     constraints,
+    routines: s.routines || [],
     today: tasks.filter((x) => x.status === 'today'),
     /** Everything whose window includes today, completed or not (for the Home checklist). */
     dueToday: tasks.filter((x) => today >= x.start && today <= x.end),
@@ -111,11 +206,11 @@ export function buildSchedule(field, doneMap = {}, today = todayISO()) {
 export function scheduleOverview(fields, doneAll = {}, today = todayISO()) {
   const plans = fields.map((f) => ({ field: f, plan: buildSchedule(f, doneAll[f.id], today) })).filter((x) => x.plan);
   const byPriority = (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
-  const withField = (field, plan) => (x) => ({ ...x, field, das: plan.das, dap: plan.dap });
+  const withField = (field, plan) => (x) => ({ ...x, field, das: plan.perennial ? null : plan.das, dap: plan.dap });
   const todayTasks = plans.flatMap(({ field, plan }) => plan.today.map(withField(field, plan))).sort(byPriority);
   const todayAll = plans.flatMap(({ field, plan }) => plan.dueToday.map(withField(field, plan))).sort(byPriority);
   const next = plans
-    .map(({ field, plan }) => plan.next && { ...plan.next, field, das: plan.das })
+    .map(({ field, plan }) => plan.next && { ...plan.next, field, das: plan.perennial ? null : plan.das })
     .filter(Boolean)
     .sort((a, b) => a.inDays - b.inDays || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])[0] || null;
   const constraints = plans.flatMap(({ field, plan }) => plan.constraints.map((c) => ({ ...c, field })));

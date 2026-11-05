@@ -34,9 +34,15 @@ export default function TodayAction() {
 
   /** "Maize · Day 35" (+ DAP for transplanted crops) and the task text, localized. */
   const calendarText = useMemo(() => {
-    const crop = (x) => L(cropCatalog[x.cropId]?.name || { en: x.cropId }).split(' (')[0];
+    const crop = (x) => {
+      const name = L(cropCatalog[x.cropId]?.name || { en: x.cropId }).split(' (')[0];
+      const own = x.field?.name?.trim();
+      return own && own !== name ? `${own} · ${name}` : name;
+    };
+    // Perennials run on the calendar, so they show the season window instead of a day count.
+    const when = (x) => (x.perennial ? t('kb.yearRound') : `${t('sch.day', { n: x.das })}${x.dap != null ? ` (${t('sch.dapShort', { n: x.dap })})` : ''}`);
     return (x) => ({
-      label: `${crop(x)} · ${t('sch.day', { n: x.das })}${x.dap != null ? ` (${t('sch.dapShort', { n: x.dap })})` : ''}`,
+      label: `${crop(x)} · ${when(x)}`,
       title: L(x.title),
       detail: L(x.detail),
     });
@@ -80,21 +86,21 @@ export default function TodayAction() {
   const totalCount = actions.length + calendarDone;
 
   return (
-    <section className="rounded-3xl bg-gradient-to-br from-forest-800 to-[#0b3b24] text-white p-5 md:p-6 shadow-lift" aria-live="polite">
+    <section className="rounded-3xl bg-gradient-to-br from-forest-800 to-[#0b3b24] text-white p-6 md:p-8 lg:p-10 shadow-lift min-h-[22rem]" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="pill-badge-glass"><Sparkles size={13} className="text-yellow-300" /> {t('ta.title')}</span>
-        <span className="text-xs text-white/70">{t('ta.doneCount', { n: doneCount, total: totalCount })}</span>
+        <span className="pill-badge-glass !text-sm"><Sparkles size={15} className="text-yellow-300" /> {t('ta.title')}</span>
+        <span className="text-sm text-white/75">{t('ta.doneCount', { n: doneCount, total: totalCount })}</span>
       </div>
 
       {top ? (
-        <div className="grid lg:grid-cols-[1fr_17rem] gap-5 mt-4">
+        <div className="grid lg:grid-cols-[1fr_20rem] gap-6 mt-6">
           <div className="min-w-0">
             <div className="flex items-start gap-3">
-              <span className="h-12 w-12 rounded-2xl bg-white/15 grid place-items-center shrink-0"><Icon size={24} className="text-yellow-300" /></span>
+              <span className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/15 grid place-items-center shrink-0"><Icon size={30} className="text-yellow-300" /></span>
               <div className="min-w-0">
                 <span className="text-[11px] uppercase tracking-wider text-yellow-300 font-semibold">{t('ta.priority', { n: 1 })}</span>
-                <h2 className="text-2xl md:text-3xl font-semibold leading-tight">{text(top, 'title')}</h2>
-                <p className="text-white/85 mt-1.5">{text(top, 'why')}</p>
+                <h2 className="text-2xl md:text-4xl font-semibold leading-tight">{text(top, 'title')}</h2>
+                <p className="text-white/85 mt-2 text-base md:text-lg">{text(top, 'why')}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {top.reasons.map((r) => <span key={r} className="text-[11px] rounded-full bg-white/10 px-2 py-0.5 text-white/80">{t(`ta.reason.${r}`)}</span>)}
                 </div>
@@ -106,13 +112,13 @@ export default function TodayAction() {
             </div>
           </div>
           {open.length > 1 && (
-            <div className="rounded-2xl bg-white/10 p-3">
+            <div className="rounded-2xl bg-white/10 p-4">
               <div className="text-xs uppercase tracking-wider text-white/70 mb-2">{t('ta.next')}</div>
               <ol className="space-y-2">
                 {open.slice(1, 4).map((a, i) => {
                   const I = ICONS[a.icon] || Sparkles;
                   return (
-                    <li key={a.id} className="flex items-start gap-2 text-sm">
+                    <li key={a.id} className="flex items-start gap-2 text-sm md:text-base">
                       <span className="text-yellow-300 font-semibold w-4">{i + 2}</span>
                       <I size={15} className="mt-0.5 shrink-0 text-white/80" />
                       <span className="flex-1 min-w-0">{text(a, 'title')}</span>
@@ -148,9 +154,9 @@ export default function TodayAction() {
 function CalendarToday({ overview, calendarText, onToggle }) {
   const { t, L } = useApp();
   return (
-    <div className="mt-5 rounded-2xl bg-white/10 p-4">
+    <div className="mt-6 rounded-2xl bg-white/10 p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h3 className="text-xs uppercase tracking-wider text-white/80 font-semibold flex items-center gap-1.5"><CalendarDays size={14} /> {t('ta.cal.title')}</h3>
+        <h3 className="text-sm uppercase tracking-wider text-white/85 font-semibold flex items-center gap-1.5"><CalendarDays size={16} /> {t('ta.cal.title')}</h3>
         <Link to="/calendar" className="text-xs underline text-white/80 min-h-[32px] inline-flex items-center">{t('ta.cal.open')}</Link>
       </div>
 
@@ -180,7 +186,7 @@ function CalendarToday({ overview, calendarText, onToggle }) {
                     <span className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${(TYPE_STYLE[x.type] || TYPE_STYLE.other).chip}`}>{t(`sch.type.${x.type}`)}</span>
                     <span className="text-[11px] text-white/70">{txt.label}</span>
                   </div>
-                  <p className={`font-semibold leading-snug mt-0.5 ${done ? 'line-through text-white/50' : ''}`}>{txt.title}</p>
+                  <p className={`text-base md:text-lg font-semibold leading-snug mt-0.5 ${done ? 'line-through text-white/50' : ''}`}>{txt.title}</p>
                   {!done && <p className="text-sm text-white/80">{txt.detail}</p>}
                 </div>
               </li>
@@ -188,7 +194,8 @@ function CalendarToday({ overview, calendarText, onToggle }) {
           })}
         </ul>
       ) : (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-sm md:text-base">
+          <p className="font-semibold text-base md:text-lg">{t('kb.noOps')}</p>
           {overview.next && (
             <p className="flex gap-2">
               <CalendarClock size={16} className="shrink-0 mt-0.5 text-yellow-300" />

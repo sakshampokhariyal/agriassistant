@@ -116,6 +116,8 @@ export default function NpkCalculator({ field }) {
               </p>
             )}
             {rdf.fymT && area > 0 && <p className="text-xs text-cream-200 mt-1">{t('cm.npk.fym', { t: rdf.fymT, ta: fmt1(perField(rdf.fymT)) })}</p>}
+            {rdf.perPlant && <p className="text-xs text-cream-200 mt-1">{L(rdf.perPlant)}</p>}
+            {rdf.extra && <p className="text-xs text-earth-400 font-semibold mt-1">{L(rdf.extra)}</p>}
           </div>
           <p className="text-xs text-cream-200 mt-2">{soilEntered ? t('cm.npk.adjusted') : t('cm.npk.addSoil')}</p>
           {plan ? (

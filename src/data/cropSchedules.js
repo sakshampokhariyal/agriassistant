@@ -9,7 +9,8 @@
  * Fertilizer amounts are given per hectare (as in the source) with per-acre equivalents
  * (1 ha = 2.47 acres; urea = 46% N).
  */
-import { cropStages } from './cropMasterData';
+import { cropStages, CROP_MASTER } from './cropMasterData';
+import { KB_SCHEDULES } from './kbSchedules';
 
 const L = (en, hi, kn) => ({ en, hi, kn });
 
@@ -389,6 +390,17 @@ const tomato = {
 
 export const cropSchedules = { paddy, maize, ragi, groundnut, tomato };
 
+// The 15 knowledge-base crops: one standard variant built from the master profile.
+Object.entries(KB_SCHEDULES).forEach(([id, s]) => {
+  const m = CROP_MASTER[id];
+  cropSchedules[id] = {
+    ...s,
+    defaultVariant: 'std',
+    variants: { std: { D: m.duration, range: m.range, spacing: m.spacing } },
+    phases: m.perennial ? null : (p) => cropStages(id, p.D),
+  };
+});
+
 /** Resolved parameters for a field: D (duration, DAS), T (transplant day) etc. */
 export function scheduleParams(field) {
   const s = cropSchedules[field?.cropId];
@@ -401,5 +413,6 @@ export function scheduleParams(field) {
 /** Phase list with day bounds for a field, or null when the crop has no schedule. */
 export function schedulePhases(field) {
   const p = scheduleParams(field);
-  return p ? cropSchedules[field.cropId].phases(p) : null;
+  const s = p && cropSchedules[field.cropId];
+  return s && s.phases ? s.phases(p) : null;
 }
