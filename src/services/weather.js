@@ -13,7 +13,7 @@ export function buildForecastUrl(lat, lon) {
     current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
     daily: 'precipitation_sum,precipitation_probability_max,weather_code,temperature_2m_max,temperature_2m_min',
     timezone: 'auto',
-    forecast_days: '7',
+    forecast_days: '8', // one spare: the first day can still be "yesterday" around midnight; the app trims past days
   });
   return `https://api.open-meteo.com/v1/forecast?${p.toString()}`;
 }

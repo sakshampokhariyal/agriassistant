@@ -9,7 +9,7 @@ import { useWeather } from '../context/WeatherContext';
 import { useChat } from '../context/ChatContext';
 import { conditionFromCode } from '../services/weather';
 import { demoQuestion } from '../data/ai';
-import { addDays, fmtDate, fmtWeekday } from '../utils/date';
+import { addDays, fmtDate, fmtWeekday, toISO } from '../utils/date';
 import { alertText, dayLabel, fmt, placeLabel } from '../utils/weatherText';
 import { Badge, PageHeader, SectionTitle, Skeleton } from '../components/ui';
 import WeatherIcon from '../components/WeatherIcon';
@@ -31,7 +31,7 @@ const RULE_ORDER = [
 ];
 
 export default function Weather() {
-  const { t, L, lang, tasks, addTask, toast } = useApp();
+  const { t, L, lang, tasks, addTask, toast, today: todayDate } = useApp();
   const w = useWeather();
   const chat = useChat();
 
@@ -61,7 +61,7 @@ export default function Weather() {
       subtitle={
         <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="inline-flex items-center gap-1"><MapPin size={15} /> {placeLabel(w, t)}</span>
-          {w.updatedAt && <span className="text-forest-500/80">· {t('wx.updated', { time: new Date(w.updatedAt).toLocaleTimeString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { hour: '2-digit', minute: '2-digit' }) })}</span>}
+          {w.updatedAt && <span className="text-forest-500/80">· {t('wx.updated', { time: new Date(w.updatedAt).toLocaleString(lang === 'en' ? 'en-IN' : `${lang}-IN`, toISO(new Date(w.updatedAt)) === todayDate ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</span>}
         </span>
       }
       action={

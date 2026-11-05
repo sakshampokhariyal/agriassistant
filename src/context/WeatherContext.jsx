@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_COORDS, fetchForecast, getPosition } from '../services/weather';
 import { useApp } from './AppContext';
+import { toISO } from '../utils/date';
 import { decideIrrigation, deriveAlerts, inputFromWeather } from '../utils/irrigation';
 
 const WeatherContext = createContext(null);
@@ -11,6 +12,10 @@ const WeatherContext = createContext(null);
  */
 const CACHE_KEY = 'ks-weather-cache-v1';
 const CACHE_FRESH_MS = 3 * 3600 * 1000;
+/** Background refresh while the app is open (longer with Data Saver on). */
+const REFRESH_MS = 30 * 60 * 1000;
+const STALE_ON_FOCUS_MS = 15 * 60 * 1000;
+const dayOf = (ms) => (ms ? toISO(new Date(ms)) : null);
 const readCache = () => {
   try {
     return JSON.parse(localStorage.getItem(CACHE_KEY));
@@ -20,7 +25,7 @@ const readCache = () => {
 };
 
 export function WeatherProvider({ children }) {
-  const { dataSaver } = useApp();
+  const { dataSaver, today } = useApp();
   // Offline-first: start from the last cached forecast (if any) so the app works without network.
   const [state, setState] = useState(() => {
     const c = readCache();
@@ -63,19 +68,53 @@ export function WeatherProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Data Saver: reuse a fresh cached forecast instead of downloading again.
+    // Data Saver: reuse a cached forecast from today that is still fresh instead of downloading again.
     const c = readCache();
-    if (dataSaver && c?.at && Date.now() - c.at < CACHE_FRESH_MS) return;
+    if (dataSaver && c?.at && dayOf(c.at) === toISO(new Date()) && Date.now() - c.at < CACHE_FRESH_MS) return;
     load();
-    // Only on first mount – later refreshes are explicit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
+  // Keep the forecast live: refresh on a timer, when the tab comes back after a while, and as soon
+  // as the date changes (a forecast fetched yesterday describes the wrong days).
+  const updatedRef = useRef(state.updatedAt);
+  updatedRef.current = state.updatedAt;
+  useEffect(() => {
+    const every = dataSaver ? CACHE_FRESH_MS : REFRESH_MS;
+    const id = setInterval(() => !document.hidden && load(), every);
+    const onShow = () => {
+      const at = updatedRef.current;
+      if (document.hidden) return;
+      if (!at || dayOf(at) !== toISO(new Date()) || Date.now() - at > (dataSaver ? CACHE_FRESH_MS : STALE_ON_FOCUS_MS)) load();
+    };
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('focus', onShow);
+    window.addEventListener('online', load);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onShow);
+      window.removeEventListener('focus', onShow);
+      window.removeEventListener('online', load);
+    };
+  }, [load, dataSaver]);
+
+  const firstDay = useRef(today);
+  useEffect(() => {
+    if (today !== firstDay.current) {
+      firstDay.current = today;
+      load();
+    }
+  }, [today, load]);
+
   const value = useMemo(() => {
-    const decision = state.data ? decideIrrigation(inputFromWeather(state.data)) : null;
-    const alerts = state.data ? deriveAlerts(state.data.daily) : [];
-    return { ...state, decision, alerts, refresh: load };
-  }, [state, load]);
+    // Never show days that are already over: daily[0] is always today, so "today's" advice,
+    // alerts and the 7-day list follow the calendar even before the next refresh arrives.
+    const data = state.data ? { ...state.data, daily: state.data.daily.filter((d) => d.date >= today).slice(0, 7) } : null;
+    const usable = data && data.daily.length ? data : null;
+    const decision = usable ? decideIrrigation(inputFromWeather(usable)) : null;
+    const alerts = usable ? deriveAlerts(usable.daily) : [];
+    return { ...state, data: usable, decision, alerts, refresh: load };
+  }, [state, load, today]);
 
   return <WeatherContext.Provider value={value}>{children}</WeatherContext.Provider>;
 }

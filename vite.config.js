@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
  *  - /proxy/newsdata → https://newsdata.io/api/1 (live agriculture news)
  * Neither source sends CORS headers, so browsers can't call them directly.
  * The data.gov.in API key is added HERE, server-side, from DATA_GOV_API_KEY in .env.local,
- * so it is never bundled into the website. In production, host an equivalent proxy.
+ * so it is never bundled into the website. In production (Vercel) api/proxy.js does the same job.
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');

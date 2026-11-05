@@ -6,6 +6,8 @@ import { initialTasks, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
 import { pastTaskIds } from '../utils/cropSchedule';
 import { initialDiscussions } from '../data/community';
 import * as authService from '../services/auth';
+import useNow from '../hooks/useNow';
+import { toISO } from '../utils/date';
 
 const AppContext = createContext(null);
 const SIGNED_OUT = { loggedIn: false, email: '', phone: '', userId: null };
@@ -165,6 +167,11 @@ export function AppProvider({ children }) {
     };
   }, []);
 
+  // Calendar date that rolls over at midnight (checked every 30 s and whenever the tab is shown),
+  // so every date-based view – crop stages, today's tasks, weather days – moves to the new day.
+  const now = useNow(30000);
+  const today = toISO(new Date(now));
+
   /** Name to show in the UI: the farmer's own name, or a generic placeholder. */
   const displayName = profile.name?.trim() || translate(lang, 'common.farmer');
 
@@ -199,8 +206,9 @@ export function AppProvider({ children }) {
       toasts, toast, dismissToast,
       loginOpen, setLoginOpen,
       resetDemo,
+      today,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import useCropViews from '../hooks/useCropViews';
+import useNow from '../hooks/useNow';
 import { useWeather } from '../context/WeatherContext';
 import TodayAction from '../components/TodayAction';
 import { conditionFromCode } from '../services/weather';
@@ -46,13 +47,14 @@ const phaseIndex = (c) => {
   return Math.min(3, Math.floor((c.progress / 100) * 4));
 };
 
-const greetingKey = () => {
-  const h = new Date().getHours();
+const greetingKey = (now) => {
+  const h = new Date(now).getHours();
   return h < 12 ? 'greet.morning' : h < 17 ? 'greet.afternoon' : 'greet.evening';
 };
 
 export default function Dashboard() {
   const { t, lang, profile } = useApp();
+  const now = useNow(60000); // greeting and date follow the clock
   const wx = useWeather();
   const farmLocation = useFarmLocation();
   const first = profile.name?.trim().split(' ')[0];
@@ -64,10 +66,10 @@ export default function Dashboard() {
         <AerialFields className="absolute inset-0 h-full w-full" />
         <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-8 md:pb-12">
           <h1 className="display text-[2.2rem] sm:text-5xl break-words">
-            {t(greetingKey())}{first ? `, ${first}` : ''}
+            {t(greetingKey(now))}{first ? `, ${first}` : ''}
           </h1>
           <p className="mt-3 text-white/85 flex flex-wrap items-center gap-x-3 gap-y-1 text-base md:text-lg">
-            <span className="inline-flex items-center gap-1.5"><CalendarDays size={17} aria-hidden /> {fmtLong(lang)}</span>
+            <span className="inline-flex items-center gap-1.5"><CalendarDays size={17} aria-hidden /> {fmtLong(lang, new Date(now))}</span>
             <span className="inline-flex items-center gap-1.5"><MapPin size={17} aria-hidden /> {placeText(profile, farmLocation)}</span>
           </p>
           <div className="mt-6 md:mt-8">
