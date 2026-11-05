@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-cream-100 text-forest-900 font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  :focus-visible {
+    outline: 3px solid #d9a24f;
+    outline-offset: 2px;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-black/[0.05] shadow-[0_1px_2px_rgba(10,46,26,0.04)];
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full font-semibold px-6 min-h-[48px] transition active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
+  }
+  /* Pill badges: "• SECTION LABEL" */
+  .pill-badge {
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium uppercase tracking-wider bg-white text-forest-900 border border-black/[0.05];
+  }
+  .pill-badge-glass {
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium uppercase tracking-wider bg-white/20 backdrop-blur-md text-white border border-white/20;
+  }
+  .pill-dot {
+    @apply h-2 w-2 rounded-full bg-yellow-400 shrink-0;
+  }
+  /* Translucent card layered over field imagery */
+  .glass-card {
+    @apply bg-emerald-950/60 backdrop-blur-lg border border-white/10 rounded-2xl p-4 text-white;
+  }
+  .display {
+    @apply font-normal tracking-[-0.035em] leading-[0.98];
+  }
+  .btn-soft {
+    @apply btn bg-forest-50 text-forest-700 hover:bg-forest-100;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-forest-700 hover:bg-forest-50 border border-forest-200;
+  }
+  .btn-earth {
+    @apply btn bg-earth-500 text-white hover:bg-earth-600;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3.5 min-h-[40px] text-sm font-bold border transition;
+  }
+  .chip-on {
+    @apply bg-forest-700 text-cream-50 border-forest-700;
+  }
+  .chip-off {
+    @apply bg-white text-forest-700 border-forest-200 hover:bg-forest-50;
+  }
+  .input {
+    @apply w-full rounded-xl border border-cream-300 bg-cream-50 px-4 min-h-[48px] text-base outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-200;
+  }
+  .label {
+    @apply block text-sm font-bold text-forest-700 mb-1.5;
+  }
+  .h-section {
+    @apply text-lg font-extrabold text-forest-800;
+  }
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(196, 87, 58, 0.5); }
+  100% { box-shadow: 0 0 0 18px rgba(196, 87, 58, 0); }
+}
+.pulse-ring {
+  animation: pulse-ring 1.2s infinite;
+}
+
+@keyframes dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.typing-dot {
+  animation: dot 1.2s infinite ease-in-out;
+}
+
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+.scan-line {
+  animation: scan 1.4s infinite alternate ease-in-out;
+}
+
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0px);
+}
