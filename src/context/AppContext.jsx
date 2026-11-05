@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import useLocalStorage from '../hooks/useLocalStorage';
 import { translate, loc } from '../translations';
 import { demoProfile, initialCrops } from '../data/farmer';
-import { initialTasks, initialNotifications, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
+import { initialTasks, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
 import { pastTaskIds } from '../utils/cropSchedule';
 import { initialDiscussions } from '../data/community';
 import * as authService from '../services/auth';
@@ -15,7 +15,6 @@ export function AppProvider({ children }) {
   const [profile, setProfile] = useLocalStorage(`ks-profile-${VERSION}`, demoProfile);
   const [crops, setCrops] = useLocalStorage(`ks-crops-${VERSION}`, initialCrops);
   const [tasks, setTasks] = useLocalStorage(`ks-tasks-${VERSION}`, initialTasks);
-  const [notifications, setNotifications] = useLocalStorage(`ks-notifs-${VERSION}`, initialNotifications);
   // v2: community posts use generic author labels (no personal names).
   const [discussions, setDiscussions] = useLocalStorage('ks-disc-v2', initialDiscussions);
   // Auth state mirrors the Supabase session (see services/auth.js).
@@ -141,11 +140,6 @@ export function AppProvider({ children }) {
     });
   }, [tasks, setTasks]);
 
-  const markAllRead = useCallback(() => setNotifications((x) => x.map((n) => ({ ...n, read: true }))), [setNotifications]);
-  const pushNotification = useCallback(
-    (n) => setNotifications((x) => [{ id: `n${Date.now()}`, read: false, ...n }, ...x]),
-    [setNotifications]
-  );
 
   /** Called after a successful sign-in ({ id, email }). Supabase keeps the session itself. */
   const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email || '', phone: user.phone || '', userId: user.id, local: !!user.local } : SIGNED_OUT), []);
@@ -180,7 +174,6 @@ export function AppProvider({ children }) {
     setCrops(fresh);
     setScheduleDone(Object.fromEntries(fresh.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))])));
     setTasks(initialTasks());
-    setNotifications(initialNotifications());
     setDiscussions(initialDiscussions);
     setLangState(demoProfile.language);
     try {
@@ -190,7 +183,7 @@ export function AppProvider({ children }) {
     } catch {
       /* ignore */
     }
-  }, [setProfile, setCrops, setScheduleDone, setTasks, setNotifications, setDiscussions, setAuth]);
+  }, [setProfile, setCrops, setScheduleDone, setTasks, setDiscussions, setAuth]);
 
   const value = useMemo(
     () => ({
@@ -201,14 +194,13 @@ export function AppProvider({ children }) {
       dataSaver, setDataSaver,
       tasks, addTask, toggleTask, deleteTask,
       scheduleDone, setScheduleTaskDone, markScheduleTasksDone,
-      notifications, markAllRead, pushNotification,
       discussions, setDiscussions,
       auth, login, logout,
       toasts, toast, dismissToast,
       loginOpen, setLoginOpen,
       resetDemo,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, notifications, markAllRead, pushNotification, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

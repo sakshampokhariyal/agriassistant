@@ -13,7 +13,7 @@ const COLORS = { mandya: '#1f6541', mysuru: '#c98a2b', bengaluru: '#3d8fa8', has
 const RANGES = [7, 14, 30];
 
 export default function Market() {
-  const { t, L, lang, toast, pushNotification } = useApp();
+  const { t, L, lang, toast } = useApp();
   const [crop, setCrop] = useState('ragi');
   const [live, setLive] = useState(null);
   const [range, setRange] = useState(14);
@@ -42,12 +42,6 @@ export default function Market() {
   const barData = sorted.map((r) => ({ name: L(r.name).split(' ')[0], modal: r.modal, net: r.net, id: r.id }));
 
   const setAlert = () => {
-    pushNotification({
-      type: 'market',
-      title: { en: 'Price alert set', hi: 'भाव अलर्ट लगाया', kn: 'ಬೆಲೆ ಎಚ್ಚರಿಕೆ ಹೊಂದಿಸಲಾಗಿದೆ' },
-      body: { en: `${c.name.en}: ${L(sel.name)} ₹${sel.modal}`, hi: `${c.name.hi}: ${sel.name.hi} ₹${sel.modal}`, kn: `${c.name.kn}: ${sel.name.kn} ₹${sel.modal}` },
-      to: '/market',
-    });
     toast(t('market.alertSet'));
   };
 

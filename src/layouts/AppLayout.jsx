@@ -11,7 +11,6 @@ import { useApp } from '../context/AppContext';
 import { useWeather } from '../context/WeatherContext';
 import useOnline from '../hooks/useOnline';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import NotificationBell from '../components/NotificationBell';
 import LoginModal from '../components/LoginModal';
 import Toaster from '../components/Toaster';
 import ChatWidget from '../components/ChatWidget';
@@ -237,7 +236,6 @@ function TopBar() {
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ConnectionStatus />
           <LanguageSwitcher variant="light" className="!border-transparent !bg-cream-100" />
-          <NotificationBell />
           <ProfileMenu />
         </div>
       </div>

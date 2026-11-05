@@ -23,7 +23,7 @@ const SNOOZE_MS = 3 * 3600 * 1000;
  * Calendar completion is shared app state, so ticking here also ticks the Crop Calendar.
  */
 export default function TodayAction() {
-  const { t, L, lang, tasks, toggleTask, toast, pushNotification, scheduleDone, setScheduleTaskDone } = useApp();
+  const { t, L, lang, tasks, toggleTask, toast, scheduleDone, setScheduleTaskDone } = useApp();
   const weather = useWeather();
   const fields = useCropViews();
   const today = todayISO();
@@ -64,12 +64,6 @@ export default function TodayAction() {
   const remind = (a) => {
     const until = Date.now() + SNOOZE_MS;
     setState({ ...st, snoozed: { ...st.snoozed, [a.id]: until } });
-    pushNotification({
-      type: 'task',
-      title: { en: "Reminder: today's action", hi: 'याद दिलाना: आज का काम', kn: 'ನೆನಪು: ಇಂದಿನ ಕೆಲಸ' },
-      body: { en: t('ta.reminderAt', { time: fmtTime(until) }), hi: t('ta.reminderAt', { time: fmtTime(until) }), kn: t('ta.reminderAt', { time: fmtTime(until) }) },
-      to: '/',
-    });
     toast(t('ta.reminderAt', { time: fmtTime(until) }), 'info');
   };
   const undo = () => setState({ date: today, done: [], snoozed: {} });
