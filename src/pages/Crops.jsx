@@ -12,6 +12,7 @@ import { Badge, EmptyState, Field, PageHeader, ProgressBar, SectionTitle } from 
 import Modal from '../components/Modal';
 import CropArt from '../components/CropArt';
 import FieldTabs from '../components/FieldTabs';
+import NpkCalculator from '../components/NpkCalculator';
 
 export default function Crops() {
   const { t, L, lang, activeField, addCrop, updateCrop, removeCrop, toast } = useApp();
@@ -49,6 +50,8 @@ export default function Crops() {
           </div>
         </>
       )}
+
+      <NpkCalculator field={field} />
 
       <FieldModal
         open={!!modal}

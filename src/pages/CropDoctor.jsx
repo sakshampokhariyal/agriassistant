@@ -10,6 +10,7 @@ import { compressImage } from '../utils/media';
 import { fieldLabel } from '../utils/fields';
 import { Badge, PageHeader, ProgressBar } from '../components/ui';
 import FieldTabs from '../components/FieldTabs';
+import PestWatch from '../components/PestWatch';
 
 const SEV = { low: 'green', medium: 'amber', high: 'red' };
 const TIPS = [
@@ -141,6 +142,8 @@ export default function CropDoctor() {
           )}
         </section>
       </div>
+
+      <PestWatch />
     </div>
   );
 }

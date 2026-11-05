@@ -2,12 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import useLocalStorage from '../hooks/useLocalStorage';
 import { translate, loc } from '../translations';
 import { demoProfile, initialCrops } from '../data/farmer';
-import { initialTasks, initialNotifications } from '../data/tasks';
+import { initialTasks, initialNotifications, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
+import { pastTaskIds } from '../utils/cropSchedule';
 import { initialDiscussions } from '../data/community';
 import * as authService from '../services/auth';
 
 const AppContext = createContext(null);
-const SIGNED_OUT = { loggedIn: false, email: '', userId: null };
+const SIGNED_OUT = { loggedIn: false, email: '', phone: '', userId: null };
 const VERSION = 'v1';
 
 export function AppProvider({ children }) {
@@ -66,7 +67,8 @@ export function AppProvider({ children }) {
   );
 
   const addTask = useCallback(
-    (task) => setTasks((x) => [...x, { id: `t${Date.now()}`, done: false, cropId: null, ...task }]),
+    // Random suffix: several tasks added in the same millisecond (e.g. Crop Doctor follow-ups) need distinct ids.
+    (task) => setTasks((x) => [...x, { id: `t${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, done: false, cropId: null, ...task }]),
     [setTasks]
   );
   const toggleTask = useCallback(
@@ -94,6 +96,51 @@ export function AppProvider({ children }) {
     [setCrops]
   );
 
+  /* ── Crop calendar completion: { [fieldId]: { [taskId]: true } } ──
+   * Shared by the Crop Calendar and the Home "Today's action" card so both update together.
+   * First run: tasks that ended >3 days ago are pre-completed, so an existing farm isn't flooded
+   * with "missed" items. Fields added later start clean (and have a "mark past done" button). */
+  const [scheduleDone, setScheduleDone] = useLocalStorage('ks-schedule-done-v1', () =>
+    Object.fromEntries(crops.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))]))
+  );
+  const setScheduleTaskDone = useCallback(
+    (fieldId, taskId, done = true) =>
+      setScheduleDone((m) => {
+        const f = { ...(m[fieldId] || {}) };
+        if (done) f[taskId] = true;
+        else delete f[taskId];
+        return { ...m, [fieldId]: f };
+      }),
+    [setScheduleDone]
+  );
+  const markScheduleTasksDone = useCallback(
+    (fieldId, ids) => setScheduleDone((m) => ({ ...m, [fieldId]: { ...(m[fieldId] || {}), ...Object.fromEntries(ids.map((id) => [id, true])) } })),
+    [setScheduleDone]
+  );
+
+  // One-time cleanup: the old demo seed had placeholder crop tasks ("top-dress urea in ragi" …)
+  // that conflict with the real crop calendar. Remove those seed entries; user-made tasks stay.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('ks-demo-tasks-cleaned-v1')) return;
+      localStorage.setItem('ks-demo-tasks-cleaned-v1', '1');
+    } catch {
+      return;
+    }
+    setTasks((x) => x.filter((tk) => !LEGACY_DEMO_TASK_IDS.includes(tk.id)));
+  }, [setTasks]);
+
+  // Repair tasks saved with duplicate ids (older addTask used only Date.now()).
+  useEffect(() => {
+    const seen = new Set();
+    if (tasks.every((tk) => !seen.has(tk.id) && seen.add(tk.id))) return;
+    // The Set lives inside the updater: React may call updaters twice in development.
+    setTasks((x) => {
+      const used = new Set();
+      return x.map((tk, i) => (used.has(tk.id) ? { ...tk, id: `${tk.id}-${i}` } : (used.add(tk.id), tk)));
+    });
+  }, [tasks, setTasks]);
+
   const markAllRead = useCallback(() => setNotifications((x) => x.map((n) => ({ ...n, read: true }))), [setNotifications]);
   const pushNotification = useCallback(
     (n) => setNotifications((x) => [{ id: `n${Date.now()}`, read: false, ...n }, ...x]),
@@ -101,7 +148,7 @@ export function AppProvider({ children }) {
   );
 
   /** Called after a successful sign-in ({ id, email }). Supabase keeps the session itself. */
-  const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email, userId: user.id, local: !!user.local } : SIGNED_OUT), []);
+  const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email || '', phone: user.phone || '', userId: user.id, local: !!user.local } : SIGNED_OUT), []);
   const logout = useCallback(async () => {
     await authService.signOut();
     setAuth(SIGNED_OUT);
@@ -111,8 +158,8 @@ export function AppProvider({ children }) {
   // (including returning from an email confirmation or password-reset link).
   useEffect(() => {
     let alive = true;
-    authService.getUser().then((u) => alive && setAuth(u ? { loggedIn: true, email: u.email, userId: u.id, local: !!u.local } : SIGNED_OUT));
-    const unsubscribe = authService.onAuthChange((u) => setAuth(u ? { loggedIn: true, email: u.email, userId: u.id, local: !!u.local } : SIGNED_OUT));
+    authService.getUser().then((u) => alive && setAuth(u ? { loggedIn: true, email: u.email || '', phone: u.phone || '', userId: u.id, local: !!u.local } : SIGNED_OUT));
+    const unsubscribe = authService.onAuthChange((u) => setAuth(u ? { loggedIn: true, email: u.email || '', phone: u.phone || '', userId: u.id, local: !!u.local } : SIGNED_OUT));
     try {
       localStorage.removeItem('ks-auth-v1'); // old mock phone login
     } catch {
@@ -129,7 +176,9 @@ export function AppProvider({ children }) {
 
   const resetDemo = useCallback(() => {
     setProfile(demoProfile);
-    setCrops(initialCrops());
+    const fresh = initialCrops();
+    setCrops(fresh);
+    setScheduleDone(Object.fromEntries(fresh.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))])));
     setTasks(initialTasks());
     setNotifications(initialNotifications());
     setDiscussions(initialDiscussions);
@@ -141,7 +190,7 @@ export function AppProvider({ children }) {
     } catch {
       /* ignore */
     }
-  }, [setProfile, setCrops, setTasks, setNotifications, setDiscussions, setAuth]);
+  }, [setProfile, setCrops, setScheduleDone, setTasks, setNotifications, setDiscussions, setAuth]);
 
   const value = useMemo(
     () => ({
@@ -151,6 +200,7 @@ export function AppProvider({ children }) {
       activeField, setActiveFieldId,
       dataSaver, setDataSaver,
       tasks, addTask, toggleTask, deleteTask,
+      scheduleDone, setScheduleTaskDone, markScheduleTasksDone,
       notifications, markAllRead, pushNotification,
       discussions, setDiscussions,
       auth, login, logout,
@@ -158,7 +208,7 @@ export function AppProvider({ children }) {
       loginOpen, setLoginOpen,
       resetDemo,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, notifications, markAllRead, pushNotification, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, notifications, markAllRead, pushNotification, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

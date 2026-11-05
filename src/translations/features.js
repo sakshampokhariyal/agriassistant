@@ -2,7 +2,7 @@
 export default {
   en: {
     'fx.comingSoon': 'More community features are coming soon.',
-    'community.title': 'Community',
+    'community.title': 'Support',
     'community.sub': 'Free, official farming help over the phone.',
     'nav.cropDoctor': 'Crop Doctor',
     'nav.help': 'Help',
@@ -202,8 +202,18 @@ export default {
     'chat.listen': 'Listen',
     'chat.stopAudio': 'Stop',
     'chat.askExpert': 'Not answered? Ask a local expert',
+    'chat.aiBadge': 'AI answer · verify locally',
+    'chat.offlineBadge': 'Offline answer',
     'chat.voiceLive': 'Speak now – your browser is converting speech to text',
     'chat.stop': 'Stop',
+    'chat.listeningLang': 'Listening… speak in {lang}',
+    'chat.listeningPh': 'Listening… speak now',
+    'chat.voiceUnsupported': 'Speech recognition is not supported on this browser.',
+    'chat.micDenied': 'Microphone access is blocked. Allow the microphone for this site in your browser settings, then try again.',
+    'chat.noSpeech': 'Didn’t hear anything. Tap the mic and speak again.',
+    'chat.noMic': 'No microphone found on this device.',
+    'chat.voiceNetwork': 'Speech recognition needs an internet connection.',
+    'chat.voiceLang': 'Speech recognition isn’t available for this language on this browser. Try English or type your question.',
 
     // Settings
     'set.title': 'Settings',
@@ -234,10 +244,10 @@ export default {
 
   hi: {
     'fx.comingSoon': 'और सामुदायिक सुविधाएं जल्द आ रही हैं।',
-    'community.title': 'समुदाय',
+    'community.title': 'सहायता',
     'community.sub': 'फ़ोन पर मुफ़्त, आधिकारिक खेती सहायता।',
     'nav.cropDoctor': 'फसल डॉक्टर',
-    'nav.help': 'सहायता',
+    'nav.help': 'विशेषज्ञ सहायता',
     'nav.settings': 'सेटिंग्स',
 
     'fld.field': 'खेत {n}',
@@ -427,8 +437,18 @@ export default {
     'chat.listen': 'सुनें',
     'chat.stopAudio': 'रोकें',
     'chat.askExpert': 'जवाब नहीं मिला? स्थानीय विशेषज्ञ से पूछें',
+    'chat.aiBadge': 'AI उत्तर · स्थानीय रूप से जांचें',
+    'chat.offlineBadge': 'ऑफ़लाइन उत्तर',
     'chat.voiceLive': 'अब बोलिए – आपका ब्राउज़र आवाज़ को लिखे शब्दों में बदल रहा है',
     'chat.stop': 'रोकें',
+    'chat.listeningLang': 'सुन रहे हैं… {lang} में बोलिए',
+    'chat.listeningPh': 'सुन रहे हैं… अब बोलिए',
+    'chat.voiceUnsupported': 'इस ब्राउज़र में आवाज़ पहचान (स्पीच रिकग्निशन) उपलब्ध नहीं है।',
+    'chat.micDenied': 'माइक्रोफ़ोन की अनुमति बंद है। ब्राउज़र सेटिंग में इस साइट के लिए माइक चालू करें, फिर कोशिश करें।',
+    'chat.noSpeech': 'कुछ सुनाई नहीं दिया। माइक दबाकर फिर बोलिए।',
+    'chat.noMic': 'इस डिवाइस में माइक्रोफ़ोन नहीं मिला।',
+    'chat.voiceNetwork': 'आवाज़ पहचान के लिए इंटरनेट ज़रूरी है।',
+    'chat.voiceLang': 'इस ब्राउज़र में इस भाषा की आवाज़ पहचान उपलब्ध नहीं। अंग्रेज़ी आज़माएं या सवाल टाइप करें।',
 
     'set.title': 'सेटिंग्स',
     'set.sub': 'धीमे नेटवर्क और सस्ते फोन पर ऐप को बेहतर चलाएं।',
@@ -458,10 +478,10 @@ export default {
 
   kn: {
     'fx.comingSoon': 'ಇನ್ನಷ್ಟು ಸಮುದಾಯ ಸೌಲಭ್ಯಗಳು ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿವೆ.',
-    'community.title': 'ಸಮುದಾಯ',
+    'community.title': 'ಸಹಾಯ',
     'community.sub': 'ಫೋನ್ ಮೂಲಕ ಉಚಿತ, ಅಧಿಕೃತ ಕೃಷಿ ಸಹಾಯ.',
     'nav.cropDoctor': 'ಬೆಳೆ ವೈದ್ಯ',
-    'nav.help': 'ಸಹಾಯ',
+    'nav.help': 'ತಜ್ಞರ ಸಹಾಯ',
     'nav.settings': 'ಸೆಟ್ಟಿಂಗ್ಸ್',
 
     'fld.field': 'ಹೊಲ {n}',
@@ -651,8 +671,18 @@ export default {
     'chat.listen': 'ಕೇಳಿ',
     'chat.stopAudio': 'ನಿಲ್ಲಿಸಿ',
     'chat.askExpert': 'ಉತ್ತರ ಸಿಗಲಿಲ್ಲವೇ? ಸ್ಥಳೀಯ ತಜ್ಞರನ್ನು ಕೇಳಿ',
+    'chat.aiBadge': 'AI ಉತ್ತರ · ಸ್ಥಳೀಯವಾಗಿ ಖಚಿತಪಡಿಸಿ',
+    'chat.offlineBadge': 'ಆಫ್‌ಲೈನ್ ಉತ್ತರ',
     'chat.voiceLive': 'ಈಗ ಮಾತನಾಡಿ – ನಿಮ್ಮ ಬ್ರೌಸರ್ ಧ್ವನಿಯನ್ನು ಪಠ್ಯಕ್ಕೆ ಬದಲಿಸುತ್ತಿದೆ',
     'chat.stop': 'ನಿಲ್ಲಿಸಿ',
+    'chat.listeningLang': 'ಕೇಳುತ್ತಿದೆ… {lang} ನಲ್ಲಿ ಮಾತನಾಡಿ',
+    'chat.listeningPh': 'ಕೇಳುತ್ತಿದೆ… ಈಗ ಮಾತನಾಡಿ',
+    'chat.voiceUnsupported': 'ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.',
+    'chat.micDenied': 'ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ನಲ್ಲಿ ಈ ಸೈಟ್‌ಗೆ ಮೈಕ್ ಅನುಮತಿಸಿ, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+    'chat.noSpeech': 'ಏನೂ ಕೇಳಿಸಲಿಲ್ಲ. ಮೈಕ್ ಒತ್ತಿ ಮತ್ತೆ ಮಾತನಾಡಿ.',
+    'chat.noMic': 'ಈ ಸಾಧನದಲ್ಲಿ ಮೈಕ್ರೊಫೋನ್ ಕಂಡುಬಂದಿಲ್ಲ.',
+    'chat.voiceNetwork': 'ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆಗೆ ಇಂಟರ್ನೆಟ್ ಬೇಕು.',
+    'chat.voiceLang': 'ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಈ ಭಾಷೆಗೆ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಲಭ್ಯವಿಲ್ಲ. ಇಂಗ್ಲಿಷ್ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಪ್ರಶ್ನೆ ಟೈಪ್ ಮಾಡಿ.',
 
     'set.title': 'ಸೆಟ್ಟಿಂಗ್ಸ್',
     'set.sub': 'ನಿಧಾನ ನೆಟ್‌ವರ್ಕ್ ಮತ್ತು ಕಡಿಮೆ ಬೆಲೆಯ ಫೋನ್‌ಗಳಲ್ಲಿ ಆ್ಯಪ್ ಉತ್ತಮವಾಗಿ ಕೆಲಸ ಮಾಡುವಂತೆ ಮಾಡಿ.',

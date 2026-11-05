@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Camera, Mic, Send, Sparkles, Trash2, X, Square, MessageCircle, Minus, Volume2, VolumeX, Phone, UserRoundSearch } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { localeOf } from '../translations';
+import { LANGUAGES, localeOf } from '../translations';
 import { useApp } from '../context/AppContext';
 import { useChat } from '../context/ChatContext';
 import { useWeather } from '../context/WeatherContext';
 import useLocalStorage from '../hooks/useLocalStorage';
-import { analyzeLeaf, detectIntent, replyFor, suggestedPrompts, welcomeMessage, demoQuestion } from '../data/ai';
-import { fmt } from '../utils/weatherText';
+import { analyzeLeaf, detectIntent, replyFor, suggestedPrompts, welcomeMessage } from '../data/ai';
+import { fmt, placeLabel } from '../utils/weatherText';
+import { askGroq } from '../services/groq';
 import { Badge, RichText } from './ui';
 import DiseaseResult from './DiseaseResult';
 
@@ -90,11 +91,8 @@ function ChatPanel({ onClose }) {
   const endRef = useRef(null);
   const fileRef = useRef(null);
   const inputRef = useRef(null);
-  const voiceTimer = useRef(null);
   const recRef = useRef(null);
   const mounted = useRef(true);
-  const [transcript, setTranscript] = useState('');
-  const [voiceMode, setVoiceMode] = useState('demo'); // live | demo
   const [speakingId, setSpeakingId] = useState(null);
   const navigate = useNavigate();
 
@@ -103,8 +101,6 @@ function ChatPanel({ onClose }) {
     inputRef.current?.focus({ preventScroll: true });
     return () => {
       mounted.current = false;
-      clearTimeout(voiceTimer.current);
-      clearInterval(voiceTimer.current);
       try {
         recRef.current?.abort();
       } catch {
@@ -118,11 +114,60 @@ function ChatPanel({ onClose }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, busy]);
 
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  /** Live context for the AI: today's date, place and the 3-day forecast + spray/irrigation advisory. */
+  const buildContext = useCallback(() => {
+    const w = weatherRef.current;
+    const lines = [`Today: ${new Date().toDateString()}. Region: Karnataka, India.`];
+    try {
+      const place = placeLabel(w, t);
+      if (place) lines.push(`Farmer's location: ${place}.`);
+      if (w?.data?.daily?.length) {
+        lines.push(
+          'Forecast: ' +
+            w.data.daily
+              .slice(0, 3)
+              .map((d) => `${d.date}: ${fmt(d.lo)}–${fmt(d.hi)}°C, rain chance ${fmt(d.prob)}%, ${fmt(d.mm, 1)} mm`)
+              .join('; ') +
+            '.'
+        );
+      }
+      if (w?.decision?.status) lines.push(`App advisory today: ${t(`wx.status.${w.decision.status}`)} – ${t(`wx.reason.${w.decision.status}`)}`);
+    } catch {
+      /* context is optional */
+    }
+    return lines.join('\n');
+  }, [t]);
+
   const reply = useCallback(
     async (userText) => {
       setBusy(true);
       const intent = detectIntent(userText);
-      await delay(1100 + Math.random() * 600);
+
+      // 1) Groq (via server-side proxy). Prior turns give it conversational memory.
+      try {
+        const history = messagesRef.current
+          .map((m) => {
+            if (m.role === 'user' && m.text) return { role: 'user', content: m.text };
+            if (m.role === 'bot' && m.text) return { role: 'assistant', content: m.text };
+            if (m.role === 'bot' && m.intent) return { role: 'assistant', content: replyFor(m.intent, lang, m.weather || weatherRef.current).slice(0, 600) };
+            return null;
+          })
+          .filter(Boolean);
+        // The new question may not be in messagesRef yet (state update pending).
+        if (history[history.length - 1]?.content !== userText) history.push({ role: 'user', content: userText });
+        const text = await askGroq(history, { lang, context: buildContext() });
+        setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', text, source: 'groq' }]);
+        if (mounted.current) setBusy(false);
+        return;
+      } catch {
+        // No key / offline / rate-limited / timeout → local rule-based answer below.
+      }
+
+      // 2) Local fallback – the chat never breaks.
+      await delay(500 + Math.random() * 400);
       // Weather answers keep a snapshot of the forecast they were based on.
       const live = intent === 'irrigate' || intent === 'weather';
       const w = weatherRef.current;
@@ -131,7 +176,7 @@ function ChatPanel({ onClose }) {
       setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', intent, weather: snap }]);
       if (mounted.current) setBusy(false);
     },
-    [setMessages]
+    [setMessages, lang, buildContext]
   );
 
   const send = useCallback(
@@ -175,77 +220,71 @@ function ChatPanel({ onClose }) {
     toast(t('assistant.photoSent'));
   };
 
-  /* ── Voice input: browser speech recognition when available, otherwise a simulated demo ── */
+  /* ── Voice input: Web Speech API → live transcript in the text box (the farmer reviews, then sends) ── */
   const stopVoice = () => {
-    clearInterval(voiceTimer.current);
-    clearTimeout(voiceTimer.current);
-    if (recRef.current) {
-      const r = recRef.current;
-      recRef.current = null;
+    const r = recRef.current;
+    if (r) {
       try {
-        r.abort();
+        r.stop(); // stop() keeps what was heard so far; onend tidies up
       } catch {
-        /* ignore */
+        recRef.current = null;
+        setListening(false);
       }
+    } else {
+      setListening(false);
     }
-    setListening(false);
-  };
-
-  const simulateVoice = () => {
-    setVoiceMode('demo');
-    const q = L(demoQuestion);
-    let i = 0;
-    voiceTimer.current = setInterval(() => {
-      i += 2;
-      setTranscript(q.slice(0, i));
-      if (i >= q.length) {
-        clearInterval(voiceTimer.current);
-        voiceTimer.current = setTimeout(() => {
-          setListening(false);
-          send(q);
-        }, 600);
-      }
-    }, 70);
   };
 
   const startVoice = () => {
     if (listening) return stopVoice();
-    stopSpeaking();
-    setTranscript('');
-    setListening(true);
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return simulateVoice();
+    if (!SR) return toast(t('chat.voiceUnsupported'), 'error');
+    stopSpeaking();
+    // Speech is added after anything already typed.
+    const base = input.trim() ? `${input.trim()} ` : '';
     try {
       const rec = new SR();
-      rec.lang = localeOf(lang);
+      rec.lang = localeOf(lang); // en-IN / hi-IN / kn-IN – follows the app language
       rec.interimResults = true;
-      let finalText = '';
-      let gotAudio = false;
+      rec.continuous = false; // one utterance; stops on a pause
+      rec.maxAlternatives = 1;
       rec.onresult = (e) => {
-        gotAudio = true;
-        const txt = Array.from(e.results).map((r) => r[0].transcript).join('');
-        setTranscript(txt);
-        if (e.results[e.results.length - 1].isFinal) finalText = txt;
+        const heard = Array.from(e.results).map((r) => r[0].transcript).join('');
+        setInput(base + heard.trimStart());
       };
-      rec.onerror = () => {
-        // Permission denied / no mic / unsupported language → fall back to the demo.
-        if (recRef.current === rec) {
-          recRef.current = null;
-          if (!gotAudio) simulateVoice();
-          else setListening(false);
-        }
+      rec.onerror = (e) => {
+        const code = e.error;
+        if (code === 'aborted') return;
+        toast(
+          t(
+            code === 'not-allowed' || code === 'service-not-allowed'
+              ? 'chat.micDenied'
+              : code === 'no-speech'
+                ? 'chat.noSpeech'
+                : code === 'network'
+                  ? 'chat.voiceNetwork'
+                  : code === 'audio-capture'
+                    ? 'chat.noMic'
+                    : code === 'language-not-supported'
+                      ? 'chat.voiceLang'
+                      : 'chat.voiceUnsupported'
+          ),
+          code === 'no-speech' ? 'info' : 'error'
+        );
       };
       rec.onend = () => {
-        if (recRef.current !== rec) return;
-        recRef.current = null;
+        if (recRef.current === rec) recRef.current = null;
+        if (!mounted.current) return;
         setListening(false);
-        if (finalText.trim()) send(finalText.trim());
+        inputRef.current?.focus();
       };
       recRef.current = rec;
-      setVoiceMode('live');
+      setListening(true);
       rec.start();
     } catch {
-      simulateVoice();
+      recRef.current = null;
+      setListening(false);
+      toast(t('chat.voiceUnsupported'), 'error');
     }
   };
 
@@ -347,7 +386,8 @@ function ChatPanel({ onClose }) {
             <Bubble key={m.id} role="bot" label={t('assistant.bot')}>
               {(() => {
                 const res = m.analysis ? analyzeLeaf(m.analysis) : null;
-                const text = res ? `${L(res.name)}. ${L(res.summary)}` : replyFor(m.intent, lang, m.weather || weather);
+                const text = res ? `${L(res.name)}. ${L(res.summary)}` : m.text || replyFor(m.intent, lang, m.weather || weather);
+                const isAi = m.source === 'groq';
                 const speaking = speakingId === m.id;
                 return (
                   <>
@@ -362,7 +402,11 @@ function ChatPanel({ onClose }) {
                       </div>
                     )}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {!res && <Badge tone="amber">{t('assistant.simulated')}</Badge>}
+                      {isAi ? (
+                        <Badge tone="green"><Sparkles size={12} className="inline -mt-0.5 mr-1" aria-hidden />{t('chat.aiBadge')}</Badge>
+                      ) : (
+                        !res && <Badge tone="amber">{t('chat.offlineBadge')}</Badge>
+                      )}
                       <button
                         onClick={() => speak(m.id, text)}
                         aria-pressed={speaking}
@@ -419,9 +463,26 @@ function ChatPanel({ onClose }) {
         )}
       </AnimatePresence>
 
+      {listening && (
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-red-100 bg-red-50 text-sm text-red-800" role="status" aria-live="polite">
+          <span className="relative flex h-3 w-3 shrink-0" aria-hidden>
+            <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
+          </span>
+          <span className="flex-1 min-w-0 font-medium">{t('chat.listeningLang', { lang: LANGUAGES.find((l) => l.code === lang)?.label || lang })}</span>
+          <span className="flex items-end gap-0.5 h-4" aria-hidden>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span key={i} className="voice-bar w-1 rounded-full bg-red-500" style={{ animationDelay: `${i * 0.12}s` }} />
+            ))}
+          </span>
+          <button type="button" onClick={stopVoice} className="ml-1 text-xs font-semibold underline min-h-[32px]">{t('chat.stop')}</button>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          if (listening) stopVoice();
           send();
         }}
         className="flex items-center gap-1.5 p-2.5 border-t border-black/[0.06] bg-white pb-[max(0.625rem,env(safe-area-inset-bottom))]"
@@ -436,37 +497,25 @@ function ChatPanel({ onClose }) {
           id="chat-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={t('assistant.placeholder')}
-          className="input !rounded-full min-w-0 !min-h-[44px]"
+          placeholder={listening ? t('chat.listeningPh') : t('assistant.placeholder')}
+          className={`input !rounded-full min-w-0 !min-h-[44px] ${listening ? '!border-red-300 !ring-2 !ring-red-200' : ''}`}
           autoComplete="off"
         />
-        <button type="button" onClick={startVoice} aria-label={t('assistant.voice')} title={t('assistant.voice')} className={`h-11 w-11 shrink-0 rounded-full grid place-items-center ${listening ? 'bg-clay-500 text-white pulse-ring' : 'bg-forest-50 text-forest-700 hover:bg-forest-100'}`}>
-          {listening ? <Square size={16} /> : <Mic size={20} />}
+        <button
+          type="button"
+          onClick={startVoice}
+          aria-label={listening ? t('chat.stop') : t('assistant.voice')}
+          aria-pressed={listening}
+          title={listening ? t('chat.stop') : t('assistant.voice')}
+          className={`h-11 w-11 shrink-0 rounded-full grid place-items-center transition ${listening ? 'bg-red-600 text-white pulse-ring' : 'bg-forest-50 text-forest-700 hover:bg-forest-100'}`}
+        >
+          {listening ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
         </button>
         <button disabled={!input.trim() || busy} aria-label={t('common.send')} className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white grid place-items-center hover:bg-emerald-500 disabled:opacity-40">
           <Send size={18} />
         </button>
       </form>
 
-      <AnimatePresence>
-        {listening && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 grid place-items-center bg-forest-900/85" role="status">
-            <div className="text-center text-white px-6 w-full">
-              <span className="h-20 w-20 rounded-full bg-clay-500 grid place-items-center mx-auto pulse-ring"><Mic size={36} /></span>
-              {/* Speech level indicator */}
-              <div className="flex items-end justify-center gap-1 h-10 mt-4" aria-hidden>
-                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                  <span key={i} className="voice-bar w-1.5 rounded-full bg-yellow-300" style={{ animationDelay: `${i * 0.11}s` }} />
-                ))}
-              </div>
-              <p className="mt-2 text-xl font-semibold">{t('assistant.listening')}</p>
-              <p className="text-white/70 text-xs">{voiceMode === 'live' ? t('chat.voiceLive') : t('assistant.listeningHint')}</p>
-              <p className="mt-4 min-h-[3rem] rounded-2xl bg-white/10 px-4 py-3 text-lg">{transcript || '…'}</p>
-              <button onClick={stopVoice} className="btn bg-white text-forest-900 hover:bg-cream-100 mt-4"><Square size={16} /> {t('chat.stop')}</button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

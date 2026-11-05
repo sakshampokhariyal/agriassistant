@@ -10,7 +10,9 @@
  *     salted SHA-256 hash. This is a PROTOTYPE convenience: it is not real security
  *     (anyone with access to this browser can read localStorage).
  *
- * user shape used by the app: { id, email, local? }
+ *  3. Phone + OTP – always local (simulated SMS, demo code 1234).
+ *
+ * user shape used by the app: { id, email?, phone?, local? }
  */
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
 
@@ -82,6 +84,7 @@ function setLocalSession(user) {
 }
 const localSessionUser = () => {
   const s = read(SESSION_KEY, null);
+  if (s?.phone) return { id: s.id, phone: s.phone, local: true };
   return s?.email ? { id: s.id, email: s.email, local: true } : null;
 };
 
@@ -109,6 +112,49 @@ async function localSignIn(email, password) {
   if (!acc) return localSignUp(em, password);
   if ((await hashPassword(password, acc.salt)) !== acc.hash) return { user: null, error: 'invalid_credentials' };
   const user = { id: acc.id, email: em, local: true };
+  setLocalSession(user);
+  lastMode = 'local';
+  return { user, error: null };
+}
+
+/* ───────────── Phone + OTP (local demo – no SMS is sent) ───────────── */
+const PHONES_KEY = 'ks-local-phones-v1';
+/** Fixed demo code. A real build would send an SMS through Supabase/Twilio/MSG91. */
+export const DEMO_OTP = '1234';
+const OTP_TTL_MS = 5 * 60 * 1000;
+let pendingOtp = null; // { phone, expires }
+
+/** Indian mobile: 10 digits starting 6–9; accepts +91 / 0 prefixes, spaces and dashes. */
+export function normalizeIndianPhone(input) {
+  let d = String(input || '').replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return /^[6-9]\d{9}$/.test(d) ? `+91${d}` : null;
+}
+/** +919876543210 → "+91 98765 43210" */
+export const formatPhone = (p) => (p && /^\+91\d{10}$/.test(p) ? `+91 ${p.slice(3, 8)} ${p.slice(8)}` : p || '');
+
+/** "Send" an OTP. Simulated: nothing leaves the device; the demo code is DEMO_OTP. */
+export async function sendPhoneOtp(phoneInput) {
+  const phone = normalizeIndianPhone(phoneInput);
+  if (!phone) return { error: 'invalid_phone' };
+  await new Promise((r) => setTimeout(r, 600)); // feels like a network round-trip
+  pendingOtp = { phone, expires: Date.now() + OTP_TTL_MS };
+  lastMode = 'local';
+  return { phone, error: null };
+}
+
+/** Verify the OTP and start a local phone session (account is created on first login). */
+export async function verifyPhoneOtp(phoneInput, otp) {
+  const phone = normalizeIndianPhone(phoneInput);
+  if (!phone) return { user: null, error: 'invalid_phone' };
+  if (!pendingOtp || pendingOtp.phone !== phone || Date.now() > pendingOtp.expires) return { user: null, error: 'otp_expired' };
+  if (String(otp).trim() !== DEMO_OTP) return { user: null, error: 'invalid_otp' };
+  pendingOtp = null;
+  const phones = read(PHONES_KEY, {});
+  if (!phones[phone]) phones[phone] = { id: newId(), phone, createdAt: new Date().toISOString() };
+  write(PHONES_KEY, phones);
+  const user = { id: phones[phone].id, phone, local: true };
   setLocalSession(user);
   lastMode = 'local';
   return { user, error: null };

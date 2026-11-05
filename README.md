@@ -40,7 +40,13 @@ src/
 
 ## Branding & auth
 - Product name lives only in `src/config/brand.js` (`APP_NAME`). UI strings use the `{app}` token, which `translate()` fills in automatically.
-- Sign-in goes through `src/services/auth.js` (mock OTP `123456` today). Swap its function bodies for Supabase phone auth – the UI does not need to change.
+- Sign-in goes through `src/services/auth.js`:
+  - **Email + password**: Supabase when configured and reachable; otherwise on-device accounts in `localStorage` (salted SHA-256 hash – prototype only, not real security).
+  - **Mobile + OTP**: simulated locally (no SMS; demo code `1234`). Real phone verification needs Supabase phone auth + an SMS provider (MSG91/Twilio).
+
+## AI features
+- **Chat assistant** (`src/services/groq.js`): Groq chat completions via the dev/preview proxy `/proxy/groq`, which adds `GROQ_API_KEY` (or `VITE_GROQ_API_KEY`) from `.env.local` server-side. It tries `llama-3.3-70b-versatile`, then `openai/gpt-oss-120b` and others the account can use. The system prompt includes live weather and the app's verified pest/insurance notes. Any failure falls back to the offline rule-based replies in `src/data/ai.js`.
+- **Crop Doctor** uses demo diagnoses (`src/data/diagnosis.js`); replace `diagnose()` with a real vision model to make it live.
 
 ## Live official feeds
 - **Market → Live mandi prices**: Agmarknet "Current Daily Price of Various Commodities from Various Markets (Mandi)" via data.gov.in (`src/services/agmarknet.js`). Falls back to cached official data, then demo data, with clear labels.

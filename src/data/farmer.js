@@ -1,4 +1,5 @@
 import { addDays } from '../utils/date';
+import { scheduleParams, schedulePhases } from './cropSchedules';
 
 const L = (en, hi, kn) => ({ en, hi, kn });
 
@@ -115,12 +116,20 @@ export const soilOptions = ['red', 'black', 'sandy', 'laterite'];
 export const landTypeOptions = ['irrigated', 'rainfed', 'mixed'];
 export const irrigationOptions = ['drip', 'sprinkler', 'flood', 'borewell', 'rainfed'];
 
-/** Compute stage / progress info for a crop instance. */
+/**
+ * Compute stage / progress info for a crop instance. Crops with a cultivation schedule
+ * (data/cropSchedules.js) take their duration and growth phases from it, so My Crops, Home
+ * and the Crop Calendar always agree.
+ */
 export function cropStatus(crop, todayISO, daysBetween, addDaysTo) {
   const cat = cropCatalog[crop.cropId];
   const age = Math.max(0, daysBetween(crop.sowDate, todayISO));
-  const stageIdx = Math.max(0, cat.stages.findIndex((s) => age < s.until));
-  const harvestDate = addDaysTo(crop.sowDate, cat.duration);
-  const progress = Math.min(100, Math.round((age / cat.duration) * 100));
-  return { cat, age, stage: cat.stages[stageIdx].name, stageIdx, harvestDate, progress, daysToHarvest: Math.max(0, cat.duration - age) };
+  const sched = scheduleParams(crop);
+  const duration = sched?.D ?? cat.duration;
+  const stages = schedulePhases(crop)?.map((ph) => ({ until: ph.end, name: ph.name })) ?? cat.stages;
+  const found = stages.findIndex((s) => age < s.until);
+  const stageIdx = found === -1 ? stages.length - 1 : found;
+  const harvestDate = addDaysTo(crop.sowDate, duration);
+  const progress = Math.min(100, Math.round((age / duration) * 100));
+  return { cat, age, stage: stages[stageIdx].name, stageIdx, duration, harvestDate, progress, daysToHarvest: Math.max(0, duration - age) };
 }

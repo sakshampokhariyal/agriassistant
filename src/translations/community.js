@@ -1,7 +1,7 @@
 /** Strings for the Community tab: helplines hub, NPK calculator, pest & disease watch. */
 export default {
   en: {
-    'cm.sub': 'Helplines, a soil-test fertilizer calculator and pest & disease signs to watch for.',
+    'cm.sub': 'Emergency and support helplines for farmers – tap to call.',
     'cm.help.title': 'Emergency & Support Helplines',
     'cm.help.sub': 'Tap a number to call directly. All numbers below are free.',
     'cm.help.call': 'Call',
@@ -41,7 +41,7 @@ export default {
     'cm.type.insect': 'Insect pest',
   },
   hi: {
-    'cm.sub': 'हेल्पलाइन, मिट्टी जांच आधारित खाद कैलकुलेटर और कीट-रोग के लक्षण।',
+    'cm.sub': 'किसानों के लिए आपातकालीन और सहायता हेल्पलाइन – कॉल करने के लिए दबाएं।',
     'cm.help.title': 'आपातकालीन और सहायता हेल्पलाइन',
     'cm.help.sub': 'सीधे कॉल करने के लिए नंबर दबाएं। नीचे के सभी नंबर निःशुल्क हैं।',
     'cm.help.call': 'कॉल करें',
@@ -81,7 +81,7 @@ export default {
     'cm.type.insect': 'कीट',
   },
   kn: {
-    'cm.sub': 'ಸಹಾಯವಾಣಿಗಳು, ಮಣ್ಣು ಪರೀಕ್ಷೆ ಆಧಾರಿತ ಗೊಬ್ಬರ ಲೆಕ್ಕಾಚಾರ ಮತ್ತು ಕೀಟ-ರೋಗ ಲಕ್ಷಣಗಳು.',
+    'cm.sub': 'ರೈತರಿಗಾಗಿ ತುರ್ತು ಮತ್ತು ಸಹಾಯವಾಣಿಗಳು – ಕರೆ ಮಾಡಲು ಒತ್ತಿ.',
     'cm.help.title': 'ತುರ್ತು ಮತ್ತು ಸಹಾಯವಾಣಿಗಳು',
     'cm.help.sub': 'ನೇರವಾಗಿ ಕರೆ ಮಾಡಲು ಸಂಖ್ಯೆಯನ್ನು ಒತ್ತಿ. ಕೆಳಗಿನ ಎಲ್ಲಾ ಸಂಖ್ಯೆಗಳು ಉಚಿತ.',
     'cm.help.call': 'ಕರೆ ಮಾಡಿ',

@@ -7,6 +7,7 @@ import { LANGUAGES } from '../translations';
 import { fmtDate } from '../utils/date';
 import { Badge, Field, PageHeader, SectionTitle } from '../components/ui';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { formatPhone } from '../services/auth';
 
 export default function Profile() {
   const { t, L, lang, setLang, profile, setProfile, displayName, auth, logout, setLoginOpen, toast, resetDemo } = useApp();
@@ -64,7 +65,7 @@ export default function Profile() {
             <h2 className="mt-3 text-xl font-extrabold text-forest-800">{displayName}</h2>
             <p className="text-forest-600/80 flex items-center justify-center gap-1"><MapPin size={16} /> {profile.village}, {profile.district}, {profile.state}</p>
             <div className="mt-3">
-              {auth.loggedIn ? <Badge tone="green"><ShieldCheck size={14} /> {t('profile.loggedIn')} · {auth.email}</Badge> : <Badge tone="amber">{t('common.guest')}</Badge>}
+              {auth.loggedIn ? <Badge tone="green"><ShieldCheck size={14} /> {t('profile.loggedIn')} · {auth.email || formatPhone(auth.phone)}</Badge> : <Badge tone="amber">{t('common.guest')}</Badge>}
             </div>
             {!auth.loggedIn && <p className="text-sm text-forest-600/80 mt-2">{t('profile.guestMode')}</p>}
             <div className="mt-4">
@@ -105,7 +106,11 @@ export default function Profile() {
                   <Row label={t('profile.village')} value={profile.village} />
                   <Row label={t('profile.district')} value={profile.district} />
                   <Row label={t('profile.state')} value={profile.state} />
-                  <Row label={t('profile.email')} value={auth.loggedIn ? auth.email : '—'} />
+                  {auth.phone ? (
+                    <Row label={t('profile.phone')} value={formatPhone(auth.phone)} />
+                  ) : (
+                    <Row label={t('profile.email')} value={auth.loggedIn ? auth.email : '—'} />
+                  )}
                   <Row label={t('profile.language')} value={LANGUAGES.find((l) => l.code === profile.language)?.label} />
                 </dl>
               </section>

@@ -48,7 +48,7 @@ export default function Schemes() {
     return schemes
       .filter((s) => (cat === 'all' ? true : cat === 'forYou' ? relevant(s) : s.category === cat))
       .filter((s) => !q || s.name.toLowerCase().includes(q) || L(s.benefit).toLowerCase().includes(q) || s.portal.name.toLowerCase().includes(q))
-      // Schemes flagged `last` (PM-KISAN, PM-KMY) always sit at the bottom; otherwise relevant ones first.
+      // Schemes flagged `last` always sit at the bottom; otherwise relevant ones first.
       .sort((a, b) => Number(!!a.last) - Number(!!b.last) || Number(relevant(b)) - Number(relevant(a)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cat, query, profile, crops, L]);

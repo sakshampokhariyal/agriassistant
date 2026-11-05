@@ -8,7 +8,7 @@ const en = {
   'nav.schemes': 'Schemes',
   'nav.market': 'Market',
   'nav.calendar': 'Calendar',
-  'nav.community': 'Community',
+  'nav.community': 'Support',
   'nav.profile': 'Profile',
   'nav.more': 'More',
 
@@ -362,7 +362,7 @@ const en = {
   'svc.schemes': 'Subsidies you may be eligible for, with documents and steps.',
   'svc.market': 'Compare mandi prices and know when to sell.',
   'svc.calendar': 'Plan sowing, irrigation, fertilizer and harvest tasks.',
-  'svc.community': 'Talk to experts and learn from other farmers.',
+  'svc.community': 'Emergency and support helplines – tap to call.',
   'lang.changed': 'Language changed to English',
   'menu.open': 'Open menu',
   'footer.demo': 'Prototype with demonstration data. Weather, prices, schemes and disease results are simulated.',

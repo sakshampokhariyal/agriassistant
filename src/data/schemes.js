@@ -7,33 +7,6 @@ const L = (en, hi, kn) => ({ en, hi, kn });
  */
 export const schemes = [
   {
-    id: 'pm-kisan',
-    name: 'PM-KISAN',
-    category: 'income',
-    last: true,
-    relevant: true,
-    benefit: L(
-      "₹6,000 per year in 3 equal installments of ₹2,000 transferred directly to landholding farmers' bank accounts.",
-      'भूमिधारक किसानों के बैंक खाते में सीधे ₹2,000 की 3 बराबर किस्तों में सालाना ₹6,000।',
-      'ಭೂಮಾಲೀಕ ರೈತರ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರವಾಗಿ ₹2,000 ದ 3 ಸಮಾನ ಕಂತುಗಳಲ್ಲಿ ವರ್ಷಕ್ಕೆ ₹6,000.'
-    ),
-    portal: { name: 'PM-KISAN Portal', url: 'https://pmkisan.gov.in/Registration' },
-  },
-  {
-    id: 'pm-kmy',
-    name: 'PM Kisan Maan-Dhan (PM-KMY)',
-    category: 'pension',
-    last: true,
-    relevant: true,
-    maxAcres: 5,
-    benefit: L(
-      'Voluntary pension scheme offering small & marginal farmers a guaranteed monthly pension of ₹3,000 after age 60.',
-      'छोटे और सीमांत किसानों के लिए स्वैच्छिक पेंशन योजना – 60 वर्ष की आयु के बाद ₹3,000 मासिक पेंशन की गारंटी।',
-      'ಸಣ್ಣ ಮತ್ತು ಅತಿ ಸಣ್ಣ ರೈತರಿಗೆ ಸ್ವಯಂಪ್ರೇರಿತ ಪಿಂಚಣಿ ಯೋಜನೆ – 60 ವರ್ಷದ ನಂತರ ತಿಂಗಳಿಗೆ ₹3,000 ಖಚಿತ ಪಿಂಚಣಿ.'
-    ),
-    portal: { name: 'Maan-Dhan Portal', url: 'https://maandhan.in/pmkmy' },
-  },
-  {
     id: 'raitha-siri',
     name: 'Raita Siri Scheme (Karnataka)',
     category: 'millet',
@@ -68,7 +41,7 @@ export const schemes = [
       'समय पर चुकाने पर लगभग 4% प्रभावी ब्याज दर पर ₹3 लाख तक का अल्पकालिक कृषि ऋण।',
       'ಸಮಯಕ್ಕೆ ಮರುಪಾವತಿಸಿದರೆ ಸುಮಾರು 4% ಪರಿಣಾಮಕಾರಿ ಬಡ್ಡಿಯಲ್ಲಿ ₹3 ಲಕ್ಷದವರೆಗೆ ಅಲ್ಪಾವಧಿ ಕೃಷಿ ಸಾಲ.'
     ),
-    portal: { name: 'PM-KISAN / KCC Form', url: 'https://pmkisan.gov.in' },
+    portal: { name: 'KCC Application Form', url: 'https://pmkisan.gov.in' },
   },
   {
     id: 'pm-kusum',
@@ -150,17 +123,6 @@ export const schemes = [
       'ಬೇಳೆಕಾಳು ಮತ್ತು ಎಣ್ಣೆಕಾಳುಗಳ (ತೊಗರಿ, ಉದ್ದು, ಮಸೂರ) ಎಂಎಸ್‌ಪಿ ದರದಲ್ಲಿ ನೇರ ಸರ್ಕಾರಿ ಖರೀದಿ ಪೋರ್ಟಲ್.'
     ),
     portal: { name: 'e-Samridhi Portal', url: 'https://esamridhi.in' },
-  },
-  {
-    id: 'pmmsy',
-    name: 'PM Matsya Sampada (PMMSY)',
-    category: 'fisheries',
-    benefit: L(
-      '40% to 60% financial assistance and credit links for fisheries, aquaculture, and pond creation.',
-      'मत्स्य पालन, जलीय कृषि और तालाब निर्माण के लिए 40% से 60% वित्तीय सहायता और ऋण जुड़ाव।',
-      'ಮೀನುಗಾರಿಕೆ, ಜಲಕೃಷಿ ಮತ್ತು ಕೊಳ ನಿರ್ಮಾಣಕ್ಕೆ 40% ರಿಂದ 60% ಆರ್ಥಿಕ ನೆರವು ಮತ್ತು ಸಾಲ ಸಂಪರ್ಕ.'
-    ),
-    portal: { name: 'NFDP Portal', url: 'https://nfdp.dof.gov.in/signup' },
   },
   {
     id: 'pkvy',

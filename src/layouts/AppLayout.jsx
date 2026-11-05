@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, MessageCircle, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
   Grid2x2, LogIn, LogOut, X, FlaskConical, ChevronDown, ShieldCheck, Megaphone, Umbrella,
-  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff,
+  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff, Smartphone,
 } from 'lucide-react';
 import { MotionConfig } from 'framer-motion';
 import { useApp } from '../context/AppContext';
@@ -16,6 +16,7 @@ import LoginModal from '../components/LoginModal';
 import Toaster from '../components/Toaster';
 import ChatWidget from '../components/ChatWidget';
 import BrandLogo from '../components/BrandLogo';
+import { formatPhone } from '../services/auth';
 
 export const NAV = [
   { to: '/', key: 'nav.dashboard', icon: Home, end: true },
@@ -27,7 +28,8 @@ export const NAV = [
   { to: '/market', key: 'nav.market', icon: LineChart },
   { to: '/schemes', key: 'nav.schemes', icon: Landmark },
   { to: '/insurance', key: 'nav.insurance', icon: Umbrella },
-  { to: '/help', key: 'nav.help', icon: LifeBuoy },
+  // Not in the sidebar / More menu; still reached from the chat and Crop Doctor "Ask an expert" links.
+  { to: '/help', key: 'nav.help', icon: LifeBuoy, hidden: true },
   { to: '/community', key: 'nav.community', icon: Users },
   { to: '/settings', key: 'nav.settings', icon: Settings2 },
   { to: '/profile', key: 'nav.profile', icon: UserRound },
@@ -85,6 +87,9 @@ function Footer() {
   );
 }
 
+/** What identifies the signed-in account: email, or the formatted +91 mobile number. */
+const accountLabel = (auth) => auth.email || formatPhone(auth.phone);
+
 /** Initials when a name is known (signed-in user), otherwise a neutral person icon. */
 function Avatar({ name, size = 44 }) {
   const initials = (name || '')
@@ -113,7 +118,7 @@ function Sidebar() {
     <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col bg-[#071f13] text-white/85 p-5 z-30">
       <Logo light />
       <nav className="mt-6 flex-1 space-y-1 overflow-y-auto scrollbar-none -mr-2 pr-2" aria-label="Main">
-        {NAV.filter((n) => n.to !== '/profile').map(({ to, key, icon: Icon, end }) => (
+        {NAV.filter((n) => n.to !== '/profile' && !n.hidden).map(({ to, key, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -168,7 +173,7 @@ function ProfileMenu() {
         <Avatar name={name} size={40} />
         <span className="hidden xl:block text-left leading-tight">
           <span className="block text-sm font-semibold text-forest-900">{signedIn ? name.split(' ')[0] || t('common.farmer') : t('common.guest')}</span>
-          <span className="block text-[11px] text-forest-600/70">{signedIn ? auth.email : t('common.signIn')}</span>
+          <span className="block text-[11px] text-forest-600/70">{signedIn ? accountLabel(auth) : t('common.signIn')}</span>
         </span>
         <ChevronDown size={16} className="hidden sm:block text-forest-600" />
       </button>
@@ -178,7 +183,10 @@ function ProfileMenu() {
             {signedIn ? (
               <>
                 <div className="font-semibold text-forest-900">{name || t('common.farmer')}</div>
-                <div className="text-xs text-forest-600/80 break-all">{auth.email}</div>
+                <div className="text-xs text-forest-600/80 break-all flex items-center gap-1">
+                  {auth.phone ? <Smartphone size={12} aria-hidden /> : null}
+                  {accountLabel(auth)}
+                </div>
                 <div className="mt-1 text-xs font-medium text-emerald-700 flex items-center gap-1"><ShieldCheck size={13} /> {t('profile.loggedIn')}</div>
                 {auth.local && <div className="mt-0.5 text-[11px] text-forest-600/70">{t('auth.localBadge')}</div>}
               </>
@@ -291,7 +299,7 @@ function BottomNav({ onMore }) {
 function MoreSheet({ open, onClose }) {
   const { t, auth, setLoginOpen, logout, toast } = useApp();
   const nav = useNavigate();
-  const rest = NAV.filter((n) => !MOBILE_MAIN.includes(n.to));
+  const rest = NAV.filter((n) => !MOBILE_MAIN.includes(n.to) && !n.hidden);
   return (
     <AnimatePresence>
       {open && (
