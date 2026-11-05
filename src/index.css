@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* AgriSahaya logo palette (see src/config/brand.js) */
+    --brand-green: #1b7a32;
+    --brand-leaf: #58a73c;
+    --brand-gold: #e9a84f;
+    --brand-navy: #1b2a5e;
+    --brand-cream: #f9f7ea;
+  }
   html {
     -webkit-tap-highlight-color: transparent;
   }

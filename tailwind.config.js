@@ -21,6 +21,16 @@ export default {
         earth: { 100: '#f6e7d0', 400: '#d9a24f', 500: '#c98a2b', 600: '#a96d1b', 700: '#8a4f2a' },
         clay: { 100: '#fbe3da', 500: '#c4573a', 600: '#a8452c' },
         sky: { 100: '#dff0f5', 500: '#3d8fa8' },
+        // Official AgriSahaya logo palette (sampled from public/logo.png); also exposed as CSS vars in index.css.
+        brand: {
+          green: '#1b7a32', // "AGRI" wordmark
+          leaf: '#58a73c', // sprout
+          gold: '#e9a84f', // sun disc
+          'gold-light': '#f8c068',
+          navy: '#1b2a5e', // hands + "SAHAYA"
+          'navy-dark': '#121c40', // tagline
+          cream: '#f9f7ea', // logo background
+        },
       },
       fontFamily: {
         sans: ['Inter','"Noto Sans Devanagari"', '"Noto Sans Kannada"', 'system-ui', 'sans-serif'],

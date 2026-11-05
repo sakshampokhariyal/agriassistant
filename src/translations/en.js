@@ -1,6 +1,6 @@
 const en = {
   'app.name': '{app}',
-  'app.tagline': 'Your farming companion',
+  'app.tagline': 'Cultivating Hope, Supporting Farmers',
   'nav.dashboard': 'Home',
   'nav.assistant': 'Assistant',
   'nav.crops': 'My Crops',

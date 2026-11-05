@@ -1,6 +1,6 @@
 const kn = {
   'app.name': '{app}',
-  'app.tagline': 'ನಿಮ್ಮ ಕೃಷಿ ಸಂಗಾತಿ',
+  'app.tagline': 'ಭರವಸೆಯ ಬೆಳೆ, ರೈತರ ಬೆಂಬಲ',
   'nav.dashboard': 'ಮುಖಪುಟ',
   'nav.assistant': 'ಸಹಾಯಕ',
   'nav.crops': 'ನನ್ನ ಬೆಳೆಗಳು',

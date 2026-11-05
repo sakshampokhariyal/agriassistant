@@ -101,7 +101,7 @@ export function AppProvider({ children }) {
   );
 
   /** Called after a successful sign-in ({ id, email }). Supabase keeps the session itself. */
-  const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email, userId: user.id } : SIGNED_OUT), []);
+  const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email, userId: user.id, local: !!user.local } : SIGNED_OUT), []);
   const logout = useCallback(async () => {
     await authService.signOut();
     setAuth(SIGNED_OUT);
@@ -111,8 +111,8 @@ export function AppProvider({ children }) {
   // (including returning from an email confirmation or password-reset link).
   useEffect(() => {
     let alive = true;
-    authService.getUser().then((u) => alive && setAuth(u ? { loggedIn: true, email: u.email, userId: u.id } : SIGNED_OUT));
-    const unsubscribe = authService.onAuthChange((u) => setAuth(u ? { loggedIn: true, email: u.email, userId: u.id } : SIGNED_OUT));
+    authService.getUser().then((u) => alive && setAuth(u ? { loggedIn: true, email: u.email, userId: u.id, local: !!u.local } : SIGNED_OUT));
+    const unsubscribe = authService.onAuthChange((u) => setAuth(u ? { loggedIn: true, email: u.email, userId: u.id, local: !!u.local } : SIGNED_OUT));
     try {
       localStorage.removeItem('ks-auth-v1'); // old mock phone login
     } catch {

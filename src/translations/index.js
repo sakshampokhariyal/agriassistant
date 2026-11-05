@@ -7,6 +7,7 @@ import chat from './chat';
 import features from './features';
 import liveFeeds from './liveFeeds';
 import authEmail from './authEmail';
+import community from './community';
 import { APP_NAME } from '../config/brand';
 
 export const LANGUAGES = [
@@ -16,7 +17,7 @@ export const LANGUAGES = [
 ];
 
 /** Feature modules keep their own string tables; they are merged into one dictionary per language. */
-const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail];
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community];
 export const dictionaries = Object.fromEntries(
   Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
 );

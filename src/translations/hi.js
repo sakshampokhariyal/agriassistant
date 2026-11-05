@@ -1,6 +1,6 @@
 const hi = {
   'app.name': '{app}',
-  'app.tagline': 'आपका खेती साथी',
+  'app.tagline': 'उम्मीद की खेती, किसानों का साथ',
   'nav.dashboard': 'होम',
   'nav.assistant': 'सहायक',
   'nav.crops': 'मेरी फसलें',

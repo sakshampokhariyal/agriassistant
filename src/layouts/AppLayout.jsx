@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, MessageCircle, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
@@ -15,6 +15,7 @@ import NotificationBell from '../components/NotificationBell';
 import LoginModal from '../components/LoginModal';
 import Toaster from '../components/Toaster';
 import ChatWidget from '../components/ChatWidget';
+import BrandLogo from '../components/BrandLogo';
 
 export const NAV = [
   { to: '/', key: 'nav.dashboard', icon: Home, end: true },
@@ -55,28 +56,32 @@ function ConnectionStatus() {
 // The assistant is the floating chat button, so the bottom bar keeps four everyday sections.
 const MOBILE_MAIN = ['/', '/crops', '/weather', '/market'];
 
+/** Brand lockup linking home. Sidebar: full lockup with tagline; mobile top bar: emblem + wordmark. */
 function Logo({ light = false }) {
   const { t } = useApp();
   return (
-    <div className="flex items-center gap-2.5">
-      <LogoMark className="h-8 w-8 shrink-0" />
-      <div className="leading-tight whitespace-nowrap hidden min-[420px]:block">
-        <div className={`font-semibold tracking-tight text-base sm:text-xl ${light ? 'text-white' : 'text-forest-900'}`}>{t('app.name')}</div>
-        <div className={`text-xs hidden ${light ? 'lg:block text-white/60' : 'text-forest-600/70'}`}>{t('app.tagline')}</div>
-      </div>
-    </div>
+    <Link to="/" aria-label={t('app.name')} className="rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold">
+      {light ? (
+        <BrandLogo light size="md" tagline={t('app.tagline')} />
+      ) : (
+        <BrandLogo size="sm" compact />
+      )}
+    </Link>
   );
 }
 
-/** Seed-cluster mark, echoing the reference logo. */
-function LogoMark({ className = '' }) {
-  const dots = [[16, 5, 3], [9, 10, 3], [23, 10, 3], [16, 15, 3.4], [4, 16, 2.4], [28, 16, 2.4], [9, 21, 3], [23, 21, 3], [16, 26, 3]];
+/** Site footer with the full brand lockup – shown under every page. */
+function Footer() {
+  const { t } = useApp();
   return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      {dots.map(([cx, cy, r], i) => (
-        <ellipse key={i} cx={cx} cy={cy} rx={r * 1.25} ry={r} fill={i % 3 === 0 ? '#4d9a2f' : '#6cb33f'} />
-      ))}
-    </svg>
+    <footer className="border-t border-black/[0.06] bg-brand-cream/70">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <BrandLogo size="sm" tagline={t('app.tagline')} />
+        <p className="text-xs text-forest-700/70 sm:text-right max-w-md">
+          © {new Date().getFullYear()} {t('app.name')} · {t('footer.demo')}
+        </p>
+      </div>
+    </footer>
   );
 }
 
@@ -175,6 +180,7 @@ function ProfileMenu() {
                 <div className="font-semibold text-forest-900">{name || t('common.farmer')}</div>
                 <div className="text-xs text-forest-600/80 break-all">{auth.email}</div>
                 <div className="mt-1 text-xs font-medium text-emerald-700 flex items-center gap-1"><ShieldCheck size={13} /> {t('profile.loggedIn')}</div>
+                {auth.local && <div className="mt-0.5 text-[11px] text-forest-600/70">{t('auth.localBadge')}</div>}
               </>
             ) : (
               <>
@@ -298,8 +304,9 @@ function MoreSheet({ open, onClose }) {
             exit={{ y: 200 }}
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-extrabold text-forest-800">{t('nav.more')}</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <BrandLogo size="sm" tagline={t('app.tagline')} />
+              <h2 className="sr-only">{t('nav.more')}</h2>
               <button onClick={onClose} aria-label={t('common.close')} className="h-11 w-11 grid place-items-center rounded-full hover:bg-forest-50">
                 <X size={22} />
               </button>
@@ -370,13 +377,17 @@ export default function AppLayout() {
         <TopBar />
         <main
           className={`flex-1 w-full ${
-            isHome ? 'pb-40 lg:pb-0' : 'max-w-7xl mx-auto px-4 md:px-8 pt-5 pb-40 lg:pb-24'
+            isHome ? 'pb-8 lg:pb-0' : 'max-w-7xl mx-auto px-4 md:px-8 pt-5 pb-10 lg:pb-16'
           }`}
         >
           <motion.div key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <Outlet />
           </motion.div>
         </main>
+        {/* Bottom padding on mobile clears the fixed bottom nav + chat button. */}
+        <div className="pb-24 lg:pb-0">
+          <Footer />
+        </div>
       </div>
       <BottomNav onMore={() => setMore(true)} />
       <MoreSheet open={more} onClose={() => setMore(false)} />

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, LogIn, Mail, MailCheck, RefreshCw, UserPlus, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, HardDrive, LogIn, Mail, MailCheck, RefreshCw, UserPlus } from 'lucide-react';
 import Modal from './Modal';
 import { Field } from './ui';
+import { LogoMark, Wordmark } from './BrandLogo';
 import { useApp } from '../context/AppContext';
 import * as authService from '../services/auth';
 
@@ -16,6 +17,8 @@ export default function LoginModal() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // True once a call fell back to on-device accounts (Supabase missing or unreachable).
+  const [localMode, setLocalMode] = useState(authService.authMode() === 'local');
 
   useEffect(() => {
     if (loginOpen) {
@@ -57,6 +60,7 @@ export default function LoginModal() {
       }
     } finally {
       setBusy(false);
+      setLocalMode(authService.authMode() === 'local');
     }
   };
 
@@ -64,9 +68,14 @@ export default function LoginModal() {
 
   return (
     <Modal open={loginOpen} onClose={close} title={title} size="sm">
-      {!authService.isAuthConfigured && (
-        <p className="mb-4 flex gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" /> {t('auth.err.not_configured')}
+      <div className="-mt-1 mb-4 flex flex-col items-center text-center gap-1.5 rounded-2xl bg-brand-cream py-4 px-3">
+        <LogoMark className="h-16 w-16" />
+        <Wordmark className="text-2xl" />
+        <span className="text-xs font-medium text-brand-navy-dark/80">{t('app.tagline')}</span>
+      </div>
+      {localMode && (
+        <p className="mb-4 flex gap-2 rounded-xl bg-sky-100/70 border border-sky-500/20 p-3 text-sm text-forest-800">
+          <HardDrive size={16} className="shrink-0 mt-0.5 text-sky-500" /> {t('auth.localNote')}
         </p>
       )}
 
@@ -144,7 +153,7 @@ export default function LoginModal() {
 
             {error && <p className="text-sm text-clay-600" role="alert">{error}</p>}
 
-            <button className="btn-primary w-full" disabled={busy || !authService.isAuthConfigured}>
+            <button className="btn-primary w-full" disabled={busy}>
               {busy ? <RefreshCw size={18} className="animate-spin" /> : mode === 'signUp' ? <UserPlus size={18} /> : mode === 'reset' ? <Mail size={18} /> : <LogIn size={18} />}
               {mode === 'signUp' ? t('auth.tab.signUp') : mode === 'reset' ? t('auth.resetSend') : t('auth.tab.signIn')}
             </button>
