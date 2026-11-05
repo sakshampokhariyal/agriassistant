@@ -1,5 +1,5 @@
 const hi = {
-  'app.name': 'कृषि सखा',
+  'app.name': '{app}',
   'app.tagline': 'आपका खेती साथी',
   'nav.dashboard': 'होम',
   'nav.assistant': 'सहायक',
@@ -38,7 +38,10 @@ const hi = {
   'common.search': 'खोजें',
   'common.details': 'विवरण',
   'common.hideDetails': 'विवरण छिपाएं',
-  'common.guest': 'डेमो किसान',
+  'common.guest': 'अतिथि',
+  'common.farmer': 'किसान',
+  'common.signIn': 'साइन इन',
+  'common.guestNote': 'आप अतिथि के रूप में देख रहे हैं। अपनी जानकारी खाते में सहेजने के लिए साइन इन करें।',
   'common.noData': 'अभी कुछ नहीं है',
 
   'greet.morning': 'सुप्रभात',
@@ -145,7 +148,7 @@ const hi = {
   'assistant.voice': 'आवाज़ से पूछें',
   'assistant.clear': 'चैट साफ़ करें',
   'assistant.you': 'आप',
-  'assistant.bot': 'सखा',
+  'assistant.bot': '{app}',
   'assistant.analyzingPhoto': 'आपकी फसल की फोटो जांची जा रही है…',
   'assistant.photoSent': 'फसल की फोटो अपलोड हुई',
   'assistant.cleared': 'चैट साफ़ हो गई',

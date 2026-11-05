@@ -3,7 +3,8 @@ import { addDays } from '../utils/date';
 const L = (en, hi, kn) => ({ en, hi, kn });
 
 export const demoProfile = {
-  name: 'Ramesh Gowda',
+  name: '', // generic: filled in by the farmer (or from auth) – never a hardcoded person
+  schema: 2,
   phone: '',
   village: 'Kikkeri',
   district: 'Mandya',

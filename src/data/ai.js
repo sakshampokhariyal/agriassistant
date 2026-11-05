@@ -3,6 +3,10 @@
  * real API calls later – the signatures are intentionally async-friendly.
  */
 import { todayPrices } from './markets';
+import { translate } from '../translations';
+import { APP_NAME } from '../config/brand';
+import { conditionFromCode } from '../services/weather';
+import { alertText, dayLabel, fmt, placeLabel } from '../utils/weatherText';
 
 const L = (en, hi, kn) => ({ en, hi, kn });
 
@@ -39,16 +43,7 @@ export function detectIntent(text) {
 }
 
 const replies = {
-  irrigate: L(
-    `**No – skip irrigation tomorrow.**\n• Rain chance tomorrow is 70% (about 9 mm), and about 22 mm more the day after.\n• Your ragi (Mandya, ~40 days) is in the tillering stage and soil moisture is already around 46%.\n• Extra water now can cause waterlogging and invite blast disease.\n\n**Next step:** re-check on Saturday. If rain stays below 5 mm, irrigate lightly on Sunday morning. I have added a reminder in your calendar.`,
-    `**नहीं – कल सिंचाई न करें।**\n• कल बारिश की संभावना 70% (लगभग 9 मिमी) है, और परसों लगभग 22 मिमी और।\n• आपकी रागी (मांड्या, लगभग 40 दिन) कल्ले निकलने की अवस्था में है और मिट्टी में पहले से लगभग 46% नमी है।\n• अभी ज़्यादा पानी देने से जलभराव और ब्लास्ट रोग का खतरा बढ़ता है।\n\n**अगला कदम:** शनिवार को फिर जांचें। बारिश 5 मिमी से कम रहे तो रविवार सुबह हल्की सिंचाई करें। मैंने कैलेंडर में रिमाइंडर जोड़ दिया है।`,
-    `**ಬೇಡ – ನಾಳೆ ನೀರು ಹಾಯಿಸಬೇಡಿ.**\n• ನಾಳೆ ಮಳೆ ಸಾಧ್ಯತೆ 70% (ಸುಮಾರು 9 ಮಿಮೀ), ನಾಡಿದ್ದು ಇನ್ನೂ ಸುಮಾರು 22 ಮಿಮೀ ಮಳೆ ಬರಬಹುದು.\n• ನಿಮ್ಮ ರಾಗಿ (ಮಂಡ್ಯ, ಸುಮಾರು 40 ದಿನ) ಟಿಲ್ಲರಿಂಗ್ ಹಂತದಲ್ಲಿದೆ ಮತ್ತು ಮಣ್ಣಿನಲ್ಲಿ ಈಗಾಗಲೇ ಸುಮಾರು 46% ತೇವಾಂಶ ಇದೆ.\n• ಈಗ ಹೆಚ್ಚು ನೀರು ಕೊಟ್ಟರೆ ನೀರು ನಿಂತು ಬೆಂಕಿರೋಗ ಬರುವ ಅಪಾಯ ಹೆಚ್ಚು.\n\n**ಮುಂದಿನ ಹೆಜ್ಜೆ:** ಶನಿವಾರ ಮತ್ತೆ ನೋಡಿ. ಮಳೆ 5 ಮಿಮೀ ಗಿಂತ ಕಡಿಮೆ ಇದ್ದರೆ ಭಾನುವಾರ ಬೆಳಿಗ್ಗೆ ಹಗುರವಾಗಿ ನೀರು ಹಾಯಿಸಿ. ನಿಮ್ಮ ಕ್ಯಾಲೆಂಡರ್‌ಗೆ ನೆನಪೋಲೆ ಸೇರಿಸಿದ್ದೇನೆ.`
-  ),
-  weather: L(
-    `**Yes, plan for rain.**\n• Tomorrow: rain likely (70%), ~9 mm. Day after: heavy rain, ~22 mm, winds up to 26 km/h.\n• Clear field drains today and tie up tomato plants.\n• Do not spray or top-dress fertilizer until the rain passes (about Saturday).\n• Humid, cloudy days raise blast and blight risk – inspect leaves afterwards.`,
-    `**हाँ, बारिश के लिए तैयार रहें।**\n• कल: बारिश की संभावना (70%), लगभग 9 मिमी। परसों: भारी बारिश, लगभग 22 मिमी, हवा 26 किमी/घंटा तक।\n• आज खेत की नालियां साफ़ करें और टमाटर के पौधे बांधें।\n• बारिश रुकने (लगभग शनिवार) तक छिड़काव या खाद न दें।\n• नम और बादल वाले दिनों में ब्लास्ट और झुलसा का खतरा बढ़ता है – बाद में पत्ते जांचें।`,
-    `**ಹೌದು, ಮಳೆಗೆ ಸಿದ್ಧರಾಗಿ.**\n• ನಾಳೆ: ಮಳೆ ಸಾಧ್ಯತೆ (70%), ಸುಮಾರು 9 ಮಿಮೀ. ನಾಡಿದ್ದು: ಭಾರಿ ಮಳೆ, ಸುಮಾರು 22 ಮಿಮೀ, ಗಾಳಿ 26 ಕಿಮೀ/ಗಂ ವರೆಗೆ.\n• ಇಂದು ಹೊಲದ ಚರಂಡಿ ಸ್ವಚ್ಛಗೊಳಿಸಿ ಮತ್ತು ಟೊಮೆಟೊ ಗಿಡಗಳನ್ನು ಕಟ್ಟಿ.\n• ಮಳೆ ನಿಲ್ಲುವವರೆಗೆ (ಸುಮಾರು ಶನಿವಾರ) ಸಿಂಪಡಣೆ ಅಥವಾ ಗೊಬ್ಬರ ಹಾಕಬೇಡಿ.\n• ತೇವ, ಮೋಡದ ದಿನಗಳಲ್ಲಿ ಬೆಂಕಿರೋಗ ಮತ್ತು ಅಂಗಮಾರಿ ಅಪಾಯ ಹೆಚ್ಚು – ನಂತರ ಎಲೆಗಳನ್ನು ಪರೀಕ್ಷಿಸಿ.`
-  ),
+  // irrigate / weather replies are generated live – see liveWeatherReply()
   fert: L(
     `**For your ragi (tillering stage, red loam):**\n• Top-dress about 25 kg urea per acre around 30–35 days after sowing – but only after the rain passes (≈ Saturday).\n• Do not apply before heavy rain; nutrients wash away.\n• A free Soil Health Card test will tell you exactly what your soil needs.\n\n*Demo advice – confirm the dose with your local agriculture officer.*`,
     `**आपकी रागी के लिए (कल्ले की अवस्था, लाल दोमट):**\n• बुवाई के 30–35 दिन बाद प्रति एकड़ लगभग 25 किग्रा यूरिया ऊपरी खाद दें – लेकिन बारिश रुकने (लगभग शनिवार) के बाद ही।\n• भारी बारिश से पहले न डालें; पोषक तत्व बह जाते हैं।\n• मृदा स्वास्थ्य कार्ड की मुफ़्त जांच से पता चलेगा कि आपकी मिट्टी को क्या चाहिए।\n\n*डेमो सलाह – मात्रा अपने कृषि अधिकारी से पक्की करें।*`,
@@ -86,24 +81,65 @@ const replies = {
   ),
 };
 
-export const replyFor = (intent, lang) => {
+/** Irrigation / weather answers come from live Open-Meteo data + the irrigation engine. */
+function liveWeatherReply(intent, lang, weather) {
+  const t = (k, v) => translate(lang, k, v);
+  if (!weather?.data || !weather.decision) return t('wx.notReady');
+  const d = weather.data;
+  const today = d.daily[0] || {};
+  const place = placeLabel(weather, t);
+  const st = weather.decision.status;
+  if (intent === 'irrigate') {
+    return [
+      `**${t(`wx.status.${st}`)}**`,
+      `• ${t('wx.rain24')}: ${fmt(today.prob)}% · ${t('wx.rainMm')}: ${fmt(today.mm, 1)} ${t('weather.mm')}`,
+      `• ${t('weather.temp')}: ${fmt(d.current.temp, 1)}°C · ${t('weather.humidity')}: ${fmt(d.current.humidity)}%`,
+      `• ${t(`wx.reason.${st}`)}`,
+      '',
+      `*${t('wx.liveNote', { place })} ${t('wx.checkSoil')}*`,
+    ].join('\n');
+  }
+  const lines = d.daily.slice(0, 3).map(
+    (x) =>
+      `• ${dayLabel(x.date, t, lang)}: ${t('cond.' + conditionFromCode(x.code))}, ${fmt(x.hi)}°/${fmt(x.lo)}° · ${t('weather.rain')} ${fmt(x.prob)}% · ${fmt(x.mm, 1)} ${t('weather.mm')}`
+  );
+  const alerts = weather.alerts.map((a) => {
+    const at = alertText(a, t, lang);
+    return `• **${at.title}** – ${at.body}`;
+  });
+  return [
+    `**${t('wx.next3')}**`,
+    ...lines,
+    ...(alerts.length ? ['', ...alerts] : ['', t('wx.noAlerts')]),
+    '',
+    `**${t('wx.advisory')}: ${t(`wx.status.${st}`)}** – ${t(`wx.reason.${st}`)}`,
+    '',
+    `*${t('wx.liveNote', { place })}*`,
+  ].join('\n');
+}
+
+export const replyFor = (intent, lang, weather) => {
+  if (intent === 'irrigate' || intent === 'weather') return liveWeatherReply(intent, lang, weather);
   const text = (replies[intent] || replies.fallback)[lang] ?? replies.fallback.en;
   if (intent !== 'price') return text;
   const p = Object.fromEntries(todayPrices('ragi').map((r) => [r.id, r.modal.toLocaleString('en-IN')]));
   return text.replace('{m}', p.mandya).replace('{y}', p.mysuru).replace('{b}', p.bengaluru);
 };
 
-export function getAssistantReply(text, lang) {
+export function getAssistantReply(text, lang, weather) {
   const intent = detectIntent(text);
-  return { intent, text: replyFor(intent, lang) };
+  return { intent, text: replyFor(intent, lang, weather) };
 }
 
-export const welcomeMessage = (name, lang) =>
-  ({
-    en: `Namaste ${name}! I am Krishi Sakha, your farming assistant. Ask me about irrigation, weather, fertilizer, diseases, schemes or prices.`,
-    hi: `नमस्ते ${name}! मैं कृषि सखा हूं, आपका खेती सहायक। सिंचाई, मौसम, खाद, रोग, योजनाओं या भाव के बारे में पूछें।`,
-    kn: `ನಮಸ್ಕಾರ ${name}! ನಾನು ಕೃಷಿ ಸಖ, ನಿಮ್ಮ ಕೃಷಿ ಸಹಾಯಕ. ನೀರಾವರಿ, ಹವಾಮಾನ, ಗೊಬ್ಬರ, ರೋಗ, ಯೋಜನೆ ಅಥವಾ ಬೆಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ.`,
-  })[lang];
+/** Greeting; `name` is optional (guests are greeted without one). */
+export const welcomeMessage = (name, lang) => {
+  const n = name ? ` ${name}` : '';
+  return {
+    en: `Namaste${n}! I am ${APP_NAME}, your farming assistant. Ask me about irrigation, weather, fertilizer, diseases, schemes or prices.`,
+    hi: `नमस्ते${n}! मैं ${APP_NAME} हूं, आपका खेती सहायक। सिंचाई, मौसम, खाद, रोग, योजनाओं या भाव के बारे में पूछें।`,
+    kn: `ನಮಸ್ಕಾರ${n}! ನಾನು ${APP_NAME}, ನಿಮ್ಮ ಕೃಷಿ ಸಹಾಯಕ. ನೀರಾವರಿ, ಹವಾಮಾನ, ಗೊಬ್ಬರ, ರೋಗ, ಯೋಜನೆ ಅಥವಾ ಬೆಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ.`,
+  }[lang];
+};
 
 /** Simulated leaf analysis. Pick a result by crop so each demo feels contextual. */
 const diseaseResults = {

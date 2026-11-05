@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogIn, LogOut, MapPin, Pencil, RotateCcw, ShieldCheck, Sprout, Save, X } from 'lucide-react';
+import { LogIn, LogOut, MapPin, Pencil, RotateCcw, ShieldCheck, Sprout, Save, X, UserRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import useCropViews from '../hooks/useCropViews';
 import { irrigationOptions, landTypeOptions, soilOptions } from '../data/farmer';
@@ -9,7 +9,7 @@ import { Badge, Field, PageHeader, SectionTitle } from '../components/ui';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Profile() {
-  const { t, L, lang, setLang, profile, setProfile, auth, logout, setLoginOpen, toast, resetDemo } = useApp();
+  const { t, L, lang, setLang, profile, setProfile, displayName, auth, logout, setLoginOpen, toast, resetDemo } = useApp();
   const crops = useCropViews();
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(profile);
@@ -32,7 +32,7 @@ export default function Profile() {
     toast(t('profile.saved'));
   };
 
-  const initials = profile.name.split(' ').map((w) => w[0]).slice(0, 2).join('');
+  const initials = (profile.name || '').trim().split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   const Row = ({ label, value }) => (
     <div className="flex justify-between gap-4 py-3 border-b border-cream-200 last:border-0">
@@ -58,11 +58,13 @@ export default function Profile() {
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="space-y-5">
           <section className="card p-6 text-center">
-            <span className="h-24 w-24 rounded-full bg-earth-400 text-white text-3xl font-extrabold grid place-items-center mx-auto">{initials}</span>
-            <h2 className="mt-3 text-xl font-extrabold text-forest-800">{profile.name}</h2>
+            <span className={`h-24 w-24 rounded-full text-3xl font-semibold grid place-items-center mx-auto ${initials ? 'bg-emerald-600 text-white' : 'bg-cream-200 text-forest-700'}`}>
+              {initials || <UserRound size={44} />}
+            </span>
+            <h2 className="mt-3 text-xl font-extrabold text-forest-800">{displayName}</h2>
             <p className="text-forest-600/80 flex items-center justify-center gap-1"><MapPin size={16} /> {profile.village}, {profile.district}, {profile.state}</p>
             <div className="mt-3">
-              {auth.loggedIn ? <Badge tone="green"><ShieldCheck size={14} /> {t('profile.loggedIn')} · +91 {auth.phone}</Badge> : <Badge tone="amber">{t('common.guest')}</Badge>}
+              {auth.loggedIn ? <Badge tone="green"><ShieldCheck size={14} /> {t('profile.loggedIn')} · {auth.email}</Badge> : <Badge tone="amber">{t('common.guest')}</Badge>}
             </div>
             {!auth.loggedIn && <p className="text-sm text-forest-600/80 mt-2">{t('profile.guestMode')}</p>}
             <div className="mt-4">
@@ -99,11 +101,11 @@ export default function Profile() {
               <section className="card p-5">
                 <SectionTitle>{t('profile.personal')}</SectionTitle>
                 <dl>
-                  <Row label={t('profile.name')} value={profile.name} />
+                  <Row label={t('profile.name')} value={profile.name || '—'} />
                   <Row label={t('profile.village')} value={profile.village} />
                   <Row label={t('profile.district')} value={profile.district} />
                   <Row label={t('profile.state')} value={profile.state} />
-                  <Row label={t('profile.phone')} value={auth.loggedIn ? `+91 ${auth.phone}` : '—'} />
+                  <Row label={t('profile.email')} value={auth.loggedIn ? auth.email : '—'} />
                   <Row label={t('profile.language')} value={LANGUAGES.find((l) => l.code === profile.language)?.label} />
                 </dl>
               </section>

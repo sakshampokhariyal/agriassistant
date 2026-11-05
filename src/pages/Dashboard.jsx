@@ -7,7 +7,19 @@ import {
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import { useApp } from '../context/AppContext';
 import useCropViews from '../hooks/useCropViews';
-import { currentWeather, dashboardAdvisory, weatherAlerts } from '../data/weather';
+import { useWeather } from '../context/WeatherContext';
+import { useChat } from '../context/ChatContext';
+import TodayAction from '../components/TodayAction';
+import { conditionFromCode } from '../services/weather';
+import { alertText, fmt } from '../utils/weatherText';
+
+const ADVICE_CHIP = {
+  red: 'bg-red-500 text-white',
+  amber: 'bg-amber-400 text-amber-950',
+  blue: 'bg-sky-400 text-sky-950',
+  green: 'bg-emerald-400 text-emerald-950',
+  gray: 'bg-white/20 text-white',
+};
 import { schemes, isRelevant } from '../data/schemes';
 import { demoQuestion } from '../data/ai';
 import { getSeries, todayPrices } from '../data/markets';
@@ -56,7 +68,9 @@ export default function Dashboard() {
   const crops = useCropViews();
   const nav = useNavigate();
   const [q, setQ] = useState('');
-  const w = currentWeather;
+  const wx = useWeather();
+  const wd = wx.data;
+  const topAlert = wx.alerts[0] ? alertText(wx.alerts[0], t, lang) : null;
   const today = todayISO();
 
   const pendingTasks = tasks.filter((x) => !x.done);
@@ -70,7 +84,7 @@ export default function Dashboard() {
     .sort((a, b) => Number(!!b.needsCrop) - Number(!!a.needsCrop))
     .slice(0, 3);
 
-  const ask = (text) => nav('/assistant', { state: { ask: text } });
+  const { ask } = useChat();
   const submit = (e) => {
     e.preventDefault();
     if (q.trim()) ask(q.trim());
@@ -88,18 +102,21 @@ export default function Dashboard() {
       {/* ───────────── Hero over aerial fields ───────────── */}
       <section className="relative -mt-[72px] overflow-hidden text-white">
         <AerialFields className="absolute inset-0 h-full w-full" />
-        <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-28 md:pt-36 pb-6 md:pb-10 min-h-[100svh] lg:min-h-[760px] flex flex-col">
+        <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-6 md:pb-10 flex flex-col">
           <div className="self-start"><SectionBadge glass>{t('hero.badge')}</SectionBadge></div>
           <p className="mt-5 text-white/80 flex flex-wrap items-center gap-x-2">
-            <span>{t(greetingKey())}, {profile.name.split(' ')[0]}</span>
+            <span>{t(greetingKey())}{profile.name?.trim() ? `, ${profile.name.trim().split(' ')[0]}` : ''}</span>
             <span className="text-white/40">·</span>
             <span className="inline-flex items-center gap-1"><MapPin size={15} aria-hidden /> {profile.village}, {profile.district}</span>
             <span className="hidden sm:inline text-white/40">·</span>
             <span className="hidden sm:inline">{fmtLong(lang)}</span>
           </p>
-          <h1 className="display mt-3 max-w-4xl text-[2.6rem] sm:text-6xl lg:text-7xl xl:text-[5.4rem] break-words">{t('hero.title')}</h1>
+          <h1 className="display mt-3 max-w-4xl text-[2.4rem] sm:text-5xl lg:text-6xl break-words">{t('hero.title')}</h1>
 
-          <div className="flex-1 min-h-10" />
+          {/* Daily "Today's action" AI agent – the first thing a farmer sees */}
+          <div className="mt-6 mb-6">
+            <TodayAction />
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,23rem)_minmax(0,19rem)_1fr] items-end">
             {/* Right block: copy + CTA + search (first on mobile) */}
@@ -129,33 +146,45 @@ export default function Dashboard() {
             {/* Weather glass card */}
             <Link to="/weather" className="glass-card block hover:bg-emerald-950/70 transition">
               <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-white/70">
-                <span>{profile.district} · {t('dash.weatherNow')}</span>
-                <span className="rounded-full bg-yellow-400/20 text-yellow-200 px-2 py-0.5 normal-case tracking-normal">{t('common.demo')}</span>
+                <span className="truncate">{wx.source === 'gps' ? t('dash.weatherNow') : `${t('wx.locDefault').split(' (')[0]} · ${t('dash.weatherNow')}`}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case tracking-normal shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" /> {t('wx.live')}
+                </span>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <div>
-                  <div className="text-5xl font-light tracking-tight">{w.temp}°C</div>
-                  <div className="text-sm text-white/75">{t('cond.' + w.condition)} · {t('dash.high')} {w.high}° / {t('dash.low')} {w.low}°</div>
-                </div>
-                <WeatherIcon cond={w.condition} size={52} />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
-                {[
-                  [Droplets, `${w.humidity}%`, t('dash.humidity')],
-                  [CloudRain, `${w.rainChance}%`, t('dash.rain')],
-                  [Wind, `${w.wind}`, t('weather.kmh')],
-                ].map(([I, v, l]) => (
-                  <div key={l} className="rounded-xl bg-white/10 px-2.5 py-2">
-                    <I size={15} className="text-white/70" aria-hidden />
-                    <div className="font-semibold mt-0.5">{v}</div>
-                    <div className="text-[11px] text-white/65 truncate">{l}</div>
+              {!wd ? (
+                <p className="mt-4 mb-2 text-sm text-white/80 flex items-center gap-2">
+                  {wx.status === 'error' ? t('wx.error') : t('wx.loading')}
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mt-2">
+                    <div>
+                      <div className="text-5xl font-light tracking-tight">{fmt(wd.current.temp)}°C</div>
+                      <div className="text-sm text-white/75">
+                        {t('cond.' + conditionFromCode(wd.current.code))} · {t('dash.high')} {fmt(wd.daily[0]?.hi)}° / {t('dash.low')} {fmt(wd.daily[0]?.lo)}°
+                      </div>
+                    </div>
+                    <WeatherIcon cond={conditionFromCode(wd.current.code)} size={52} />
                   </div>
-                ))}
-              </div>
-              <p className="mt-3 text-sm text-white/90 border-t border-white/10 pt-3">
-                <span className="text-yellow-300 font-medium">{t('dash.advisory')}: </span>
-                {L(dashboardAdvisory)}
-              </p>
+                  <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
+                    {[
+                      [Droplets, `${fmt(wd.current.humidity)}%`, t('dash.humidity')],
+                      [CloudRain, `${fmt(wd.daily[0]?.prob)}%`, t('wx.rain24')],
+                      [Wind, `${fmt(wd.daily[0]?.mm, 1)} ${t('weather.mm')}`, t('wx.rainMm')],
+                    ].map(([I, v, l]) => (
+                      <div key={l} className="rounded-xl bg-white/10 px-2.5 py-2">
+                        <I size={15} className="text-white/70" aria-hidden />
+                        <div className="font-semibold mt-0.5">{v}</div>
+                        <div className="text-[11px] text-white/65 truncate">{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-sm text-white/90 border-t border-white/10 pt-3">
+                    <span className={`inline-block rounded-full px-2 py-0.5 mr-1.5 text-xs font-semibold ${ADVICE_CHIP[wx.decision.tone]}`}>{t(`wx.status.${wx.decision.status}`)}</span>
+                    {t(`wx.reason.${wx.decision.status}`)}
+                  </p>
+                </>
+              )}
             </Link>
 
             {/* Lead crop glass card */}
@@ -180,6 +209,7 @@ export default function Dashboard() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16 space-y-16 md:space-y-20">
+
         {/* ───────────── Your farm today + stats ───────────── */}
         <section>
           <div className="grid lg:grid-cols-[1fr_1.6fr] gap-6 items-start">
@@ -199,14 +229,16 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <Link to="/weather" className="mt-10 flex items-start gap-3 rounded-2xl bg-white border border-black/[0.05] p-4 hover:border-clay-500/40 transition">
-            <span className="h-10 w-10 rounded-full bg-clay-100 text-clay-600 grid place-items-center shrink-0"><AlertTriangle size={20} /></span>
-            <div className="min-w-0">
-              <div className="font-semibold text-forest-900">{L(weatherAlerts[0].title)}</div>
-              <p className="text-forest-600/90">{L(weatherAlerts[0].body)}</p>
-            </div>
-            <ArrowRight size={18} className="ml-auto shrink-0 text-forest-500 mt-2" />
-          </Link>
+          {topAlert && (
+            <Link to="/weather" className="mt-10 flex items-start gap-3 rounded-2xl bg-white border border-black/[0.05] p-4 hover:border-clay-500/40 transition">
+              <span className="h-10 w-10 rounded-full bg-clay-100 text-clay-600 grid place-items-center shrink-0"><AlertTriangle size={20} /></span>
+              <div className="min-w-0">
+                <div className="font-semibold text-forest-900">{topAlert.title}</div>
+                <p className="text-forest-600/90">{topAlert.body}</p>
+              </div>
+              <ArrowRight size={18} className="ml-auto shrink-0 text-forest-500 mt-2" />
+            </Link>
+          )}
         </section>
 
         {/* ───────────── Tasks · Market · Schemes ───────────── */}

@@ -5,6 +5,9 @@ import { useApp } from '../context/AppContext';
 import { getRecommendation, getSeries, mandis, marketCrops, todayPrices } from '../data/markets';
 import { fmtDate, fmtNum } from '../utils/date';
 import { Badge, DemoNote, PageHeader, SectionTitle } from '../components/ui';
+import MspTracker from '../components/market/MspTracker';
+import SellCalculator from '../components/market/SellCalculator';
+import LivePrices from '../components/market/LivePrices';
 
 const COLORS = { mandya: '#1f6541', mysuru: '#c98a2b', bengaluru: '#3d8fa8', hassan: '#a8452c', tumakuru: '#6b7d33' };
 const RANGES = [7, 14, 30];
@@ -12,6 +15,7 @@ const RANGES = [7, 14, 30];
 export default function Market() {
   const { t, L, lang, toast, pushNotification } = useApp();
   const [crop, setCrop] = useState('ragi');
+  const [live, setLive] = useState(null);
   const [range, setRange] = useState(14);
   const [visible, setVisible] = useState(['mandya', 'mysuru', 'bengaluru']);
   const [mandiId, setMandiId] = useState('mandya');
@@ -71,6 +75,17 @@ export default function Market() {
           </div>
         </div>
       </section>
+
+      {/* Live Agmarknet prices (official) – falls back to cached / demo data */}
+      <div className="mb-5">
+        <LivePrices cropId={crop} onRows={setLive} />
+      </div>
+
+      {/* Mandi price vs MSP tracker + selling-price calculator */}
+      <div className="grid lg:grid-cols-2 gap-5 mb-5">
+        <MspTracker onPick={setCrop} />
+        <SellCalculator cropId={crop} live={live} />
+      </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">

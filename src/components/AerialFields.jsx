@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useApp } from '../context/AppContext';
 
 /**
  * Procedurally drawn aerial view of patchwork crop fields with tree lines.
@@ -110,19 +111,29 @@ function AerialFields({ seed = 7, className = '', tint = true }) {
   );
 }
 
-export default memo(AerialFields);
+const MemoFields = memo(AerialFields);
 
-/** Real photo with a calm gradient fallback (works offline). */
+/** Aerial background – replaced by a flat colour in Data Saver mode (no complex SVG to render). */
+export default function AerialBackground(props) {
+  const { dataSaver } = useApp();
+  if (dataSaver) return <div className={`${props.className || ''} bg-gradient-to-b from-[#0b3b24] to-[#06200f]`} aria-hidden />;
+  return <MemoFields {...props} />;
+}
+
+/** Real photo with a calm gradient fallback (works offline). Not downloaded at all in Data Saver mode. */
 export function Photo({ id, alt = '', className = '' }) {
+  const { dataSaver } = useApp();
   return (
     <div className={`relative overflow-hidden bg-gradient-to-br from-forest-300 via-moss-400 to-forest-600 ${className}`}>
-      <img
-        src={`https://images.unsplash.com/${id}?w=800&q=70&auto=format&fit=crop`}
-        alt={alt}
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover"
-        onError={(e) => (e.currentTarget.style.display = 'none')}
-      />
+      {!dataSaver && (
+        <img
+          src={`https://images.unsplash.com/${id}?w=800&q=70&auto=format&fit=crop`}
+          alt={alt}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => (e.currentTarget.style.display = 'none')}
+        />
+      )}
     </div>
   );
 }

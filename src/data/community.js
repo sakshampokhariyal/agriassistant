@@ -50,7 +50,7 @@ export const experts = [
 export const initialDiscussions = [
   {
     id: 'd1',
-    author: L('Kavitha, Maddur', 'कविता, मद्दूर', 'ಕವಿತಾ, ಮದ್ದೂರು'),
+    author: L('Farmer, Maddur', 'किसान, मद्दूर', 'ರೈತ, ಮದ್ದೂರು'),
     q: L('Brown spots on ragi leaves after cloudy days. What should I do?', 'बादल वाले दिनों के बाद रागी के पत्तों पर भूरे धब्बे। क्या करूं?', 'ಮೋಡದ ದಿನಗಳ ನಂತರ ರಾಗಿ ಎಲೆಗಳಲ್ಲಿ ಕಂದು ಕಲೆಗಳು. ಏನು ಮಾಡಬೇಕು?'),
     answers: [
       { by: L('Dr. Lakshmi Narayan', 'डॉ. लक्ष्मी नारायण', 'ಡಾ. ಲಕ್ಷ್ಮೀ ನಾರಾಯಣ್'), text: L('Likely leaf blast. Avoid excess nitrogen and spray a recommended fungicide on a dry day.', 'संभवतः पत्ती ब्लास्ट। ज़्यादा नाइट्रोजन न दें और सूखे दिन अनुशंसित फफूंदनाशक छिड़कें।', 'ಬಹುಶಃ ಎಲೆ ಬೆಂಕಿರೋಗ. ಹೆಚ್ಚು ಸಾರಜನಕ ಬೇಡ, ಒಣ ದಿನ ಶಿಫಾರಸು ಮಾಡಿದ ಶಿಲೀಂಧ್ರನಾಶಕ ಸಿಂಪಡಿಸಿ.') },
@@ -60,18 +60,18 @@ export const initialDiscussions = [
   },
   {
     id: 'd2',
-    author: L('Basavaraj, Srirangapatna', 'बसवराज, श्रीरंगपट्टन', 'ಬಸವರಾಜ, ಶ್ರೀರಂಗಪಟ್ಟಣ'),
+    author: L('Farmer, Srirangapatna', 'किसान, श्रीरंगपट्टन', 'ರೈತ, ಶ್ರೀರಂಗಪಟ್ಟಣ'),
     q: L('Which mandi paid best for ragi this week?', 'इस हफ्ते रागी का सबसे अच्छा भाव किस मंडी में मिला?', 'ಈ ವಾರ ರಾಗಿಗೆ ಯಾವ ಮಂಡಿಯಲ್ಲಿ ಉತ್ತಮ ಬೆಲೆ ಸಿಕ್ಕಿತು?'),
     answers: [
-      { by: L('Mahesh, Mysuru', 'महेश, मैसूरु', 'ಮಹೇಶ, ಮೈಸೂರು'), text: L('Bengaluru was best for me, but check transport cost first.', 'मेरे लिए बेंगलुरु सबसे अच्छा रहा, पर पहले ढुलाई खर्च देख लें।', 'ನನಗೆ ಬೆಂಗಳೂರು ಉತ್ತಮ, ಆದರೆ ಮೊದಲು ಸಾಗಣೆ ವೆಚ್ಚ ನೋಡಿ.') },
-      { by: L('Rekha, Mandya', 'रेखा, मांड्या', 'ರೇಖಾ, ಮಂಡ್ಯ'), text: L('Local APMC was fine and saved me the trip.', 'स्थानीय एपीएमसी ठीक रही और सफर बच गया।', 'ಸ್ಥಳೀಯ ಎಪಿಎಂಸಿ ಸರಿಯಿತ್ತು, ಪ್ರಯಾಣ ಉಳಿಯಿತು.') },
+      { by: L('Farmer, Mysuru', 'किसान, मैसूरु', 'ರೈತ, ಮೈಸೂರು'), text: L('Bengaluru was best for me, but check transport cost first.', 'मेरे लिए बेंगलुरु सबसे अच्छा रहा, पर पहले ढुलाई खर्च देख लें।', 'ನನಗೆ ಬೆಂಗಳೂರು ಉತ್ತಮ, ಆದರೆ ಮೊದಲು ಸಾಗಣೆ ವೆಚ್ಚ ನೋಡಿ.') },
+      { by: L('Farmer, Mandya', 'किसान, मांड्या', 'ರೈತ, ಮಂಡ್ಯ'), text: L('Local APMC was fine and saved me the trip.', 'स्थानीय एपीएमसी ठीक रही और सफर बच गया।', 'ಸ್ಥಳೀಯ ಎಪಿಎಂಸಿ ಸರಿಯಿತ್ತು, ಪ್ರಯಾಣ ಉಳಿಯಿತು.') },
     ],
     helpful: 12,
     ago: L('Yesterday', 'कल', 'ನಿನ್ನೆ'),
   },
   {
     id: 'd3',
-    author: L('Shivanna, Pandavapura', 'शिवन्ना, पांडवपुरा', 'ಶಿವಣ್ಣ, ಪಾಂಡವಪುರ'),
+    author: L('Farmer, Pandavapura', 'किसान, पांडवपुरा', 'ರೈತ, ಪಾಂಡವಪುರ'),
     q: L('Is drip worth it for half an acre of tomato?', 'आधे एकड़ टमाटर के लिए क्या ड्रिप फायदेमंद है?', 'ಅರ್ಧ ಎಕರೆ ಟೊಮೆಟೊಗೆ ಹನಿ ನೀರಾವರಿ ಲಾಭದಾಯಕವೇ?'),
     answers: [
       { by: L('Mr. Suresh Patil', 'श्री सुरेश पाटिल', 'ಶ್ರೀ ಸುರೇಶ್ ಪಾಟೀಲ್'), text: L('Yes, it saves water and reduces leaf diseases. Check the subsidy scheme first.', 'हाँ, पानी बचता है और पत्तों के रोग कम होते हैं। पहले सब्सिडी योजना देखें।', 'ಹೌದು, ನೀರು ಉಳಿಯುತ್ತದೆ ಮತ್ತು ಎಲೆ ರೋಗ ಕಡಿಮೆಯಾಗುತ್ತದೆ. ಮೊದಲು ಸಹಾಯಧನ ಯೋಜನೆ ನೋಡಿ.') },

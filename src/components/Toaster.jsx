@@ -12,7 +12,7 @@ const tones = {
 export default function Toaster() {
   const { toasts, dismissToast } = useApp();
   return (
-    <div className="fixed z-[80] left-0 right-0 bottom-24 md:bottom-6 md:left-auto md:right-6 flex flex-col items-center md:items-end gap-2 px-4 pointer-events-none" aria-live="polite">
+    <div className="fixed z-[80] left-0 right-0 bottom-44 lg:bottom-24 md:left-auto md:right-6 flex flex-col items-center md:items-end gap-2 px-4 pointer-events-none" aria-live="polite">
       <AnimatePresence>
         {toasts.map((m) => {
           const Icon = icons[m.type] || Info;

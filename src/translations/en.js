@@ -1,5 +1,5 @@
 const en = {
-  'app.name': 'Krishi Sakha',
+  'app.name': '{app}',
   'app.tagline': 'Your farming companion',
   'nav.dashboard': 'Home',
   'nav.assistant': 'Assistant',
@@ -38,7 +38,10 @@ const en = {
   'common.search': 'Search',
   'common.details': 'Details',
   'common.hideDetails': 'Hide details',
-  'common.guest': 'Demo farmer',
+  'common.guest': 'Guest',
+  'common.farmer': 'Farmer',
+  'common.signIn': 'Sign in',
+  'common.guestNote': 'You are browsing as a guest. Sign in to save your details to your account.',
   'common.noData': 'Nothing here yet',
 
   'greet.morning': 'Good morning',
@@ -145,7 +148,7 @@ const en = {
   'assistant.voice': 'Voice input',
   'assistant.clear': 'Clear chat',
   'assistant.you': 'You',
-  'assistant.bot': 'Sakha',
+  'assistant.bot': '{app}',
   'assistant.analyzingPhoto': 'Analyzing your crop photo…',
   'assistant.photoSent': 'Crop photo uploaded',
   'assistant.cleared': 'Chat cleared',

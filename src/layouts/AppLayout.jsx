@@ -3,28 +3,57 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, MessageCircle, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
-  Grid2x2, LogIn, LogOut, X, FlaskConical, ChevronDown, ShieldCheck, Megaphone,
+  Grid2x2, LogIn, LogOut, X, FlaskConical, ChevronDown, ShieldCheck, Megaphone, Umbrella,
+  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff,
 } from 'lucide-react';
+import { MotionConfig } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { useWeather } from '../context/WeatherContext';
+import useOnline from '../hooks/useOnline';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationBell from '../components/NotificationBell';
 import LoginModal from '../components/LoginModal';
 import Toaster from '../components/Toaster';
+import ChatWidget from '../components/ChatWidget';
 
 export const NAV = [
   { to: '/', key: 'nav.dashboard', icon: Home, end: true },
   { to: '/announcements', key: 'nav.announcements', icon: Megaphone },
-  { to: '/assistant', key: 'nav.assistant', icon: MessageCircle },
   { to: '/crops', key: 'nav.crops', icon: Sprout },
+  { to: '/crop-doctor', key: 'nav.cropDoctor', icon: Stethoscope },
   { to: '/weather', key: 'nav.weather', icon: CloudSun },
-  { to: '/schemes', key: 'nav.schemes', icon: Landmark },
-  { to: '/market', key: 'nav.market', icon: LineChart },
   { to: '/calendar', key: 'nav.calendar', icon: CalendarDays },
+  { to: '/market', key: 'nav.market', icon: LineChart },
+  { to: '/schemes', key: 'nav.schemes', icon: Landmark },
+  { to: '/insurance', key: 'nav.insurance', icon: Umbrella },
+  { to: '/help', key: 'nav.help', icon: LifeBuoy },
   { to: '/community', key: 'nav.community', icon: Users },
+  { to: '/settings', key: 'nav.settings', icon: Settings2 },
   { to: '/profile', key: 'nav.profile', icon: UserRound },
 ];
 
-const MOBILE_MAIN = ['/', '/assistant', '/crops', '/weather'];
+/** Shows when offline or in Data Saver mode, so farmers know they may be seeing cached data. */
+function ConnectionStatus() {
+  const { t, dataSaver, lang } = useApp();
+  const online = useOnline();
+  const weather = useWeather();
+  if (online && !dataSaver) return null;
+  const time = weather.updatedAt ? new Date(weather.updatedAt).toLocaleTimeString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { hour: 'numeric', minute: '2-digit' }) : null;
+  return (
+    <NavLink
+      to="/settings"
+      title={online ? t('set.dataSaverOn') : t('set.isOffline')}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 min-h-[36px] text-xs font-semibold ${online ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}
+    >
+      {online ? <Feather size={15} /> : <CloudOff size={15} />}
+      <span className="hidden md:inline">{online ? t('set.dataSaverOn') : t('set.isOffline')}</span>
+      {time && <span className="hidden xl:inline font-normal">· {t('set.cachedAt', { time })}</span>}
+    </NavLink>
+  );
+}
+
+// The assistant is the floating chat button, so the bottom bar keeps four everyday sections.
+const MOBILE_MAIN = ['/', '/crops', '/weather', '/market'];
 
 function Logo({ light = false }) {
   const { t } = useApp();
@@ -51,25 +80,30 @@ function LogoMark({ className = '' }) {
   );
 }
 
+/** Initials when a name is known (signed-in user), otherwise a neutral person icon. */
 function Avatar({ name, size = 44 }) {
-  const initials = name
-    .split(' ')
+  const initials = (name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
-    .join('');
+    .join('')
+    .toUpperCase();
   return (
     <span
       style={{ width: size, height: size }}
-      className="rounded-full bg-earth-400 text-white font-extrabold grid place-items-center shrink-0"
+      className={`rounded-full font-semibold grid place-items-center shrink-0 ${initials ? 'bg-emerald-600 text-white' : 'bg-cream-200 text-forest-700'}`}
       aria-hidden
     >
-      {initials}
+      {initials || <UserRound size={Math.round(size * 0.5)} />}
     </span>
   );
 }
 
+/** Navigation only – account controls live in the top-right ProfileMenu. */
 function Sidebar() {
-  const { t, profile, auth, setLoginOpen, logout, toast } = useApp();
+  const { t } = useApp();
   return (
     <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col bg-[#071f13] text-white/85 p-5 z-30">
       <Logo light />
@@ -89,39 +123,19 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="rounded-2xl bg-white/10 p-3 mt-4">
-        <NavLink to="/profile" className="flex items-center gap-3 rounded-xl hover:bg-white/10 p-1.5">
-          <Avatar name={profile.name} />
-          <div className="min-w-0">
-            <div className="font-bold truncate">{profile.name}</div>
-            <div className="text-xs text-cream-200 truncate">
-              {profile.village}, {profile.district}
-            </div>
-          </div>
-        </NavLink>
-        <button
-          onClick={() => {
-            if (auth.loggedIn) {
-              logout();
-              toast(t('auth.loggedOut'), 'info');
-            } else setLoginOpen(true);
-          }}
-          className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl min-h-[44px] bg-white/10 hover:bg-white/20 font-bold text-sm"
-        >
-          {auth.loggedIn ? <LogOut size={16} /> : <LogIn size={16} />}
-          {auth.loggedIn ? t('common.logout') : t('common.login')}
-        </button>
-      </div>
-      <p className="mt-3 text-[11px] text-cream-200/80 flex gap-1.5">
-        <FlaskConical size={13} className="shrink-0 mt-0.5" /> {t('footer.demo')}
-      </p>
     </aside>
   );
 }
 
-/** Top-right farmer button: profile link + phone/OTP login state. */
+/**
+ * Top-right account widget – the single place for profile + sign-in.
+ * Guest: neutral icon + "Sign in". Signed in: initials + email.
+ * Sign-in itself goes through services/auth.js (mock now, Supabase-ready).
+ */
 function ProfileMenu() {
   const { t, profile, auth, setLoginOpen, logout, toast } = useApp();
+  const signedIn = auth.loggedIn;
+  const name = signedIn ? profile.name?.trim() : '';
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const nav = useNavigate();
@@ -146,22 +160,27 @@ function ProfileMenu() {
         aria-label={t('nav.profile')}
         className="flex items-center gap-2 rounded-full pl-1 pr-1 sm:pr-3 min-h-[44px] hover:bg-cream-100 transition"
       >
-        <Avatar name={profile.name} size={40} />
+        <Avatar name={name} size={40} />
         <span className="hidden xl:block text-left leading-tight">
-          <span className="block text-sm font-semibold text-forest-900">{profile.name.split(' ')[0]}</span>
-          <span className="block text-[11px] text-forest-600/70">{auth.loggedIn ? `+91 ${auth.phone}` : t('common.guest')}</span>
+          <span className="block text-sm font-semibold text-forest-900">{signedIn ? name.split(' ')[0] || t('common.farmer') : t('common.guest')}</span>
+          <span className="block text-[11px] text-forest-600/70">{signedIn ? auth.email : t('common.signIn')}</span>
         </span>
         <ChevronDown size={16} className="hidden sm:block text-forest-600" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-black/[0.06] shadow-lift p-2 z-50">
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-black/[0.06] shadow-lift p-2 z-50">
           <div className="px-3 py-2">
-            <div className="font-semibold text-forest-900">{profile.name}</div>
-            <div className="text-xs text-forest-600/80">{profile.village}, {profile.district}</div>
-            {auth.loggedIn ? (
-              <div className="mt-1 text-xs font-medium text-emerald-700 flex items-center gap-1"><ShieldCheck size={13} /> {t('profile.loggedIn')}</div>
+            {signedIn ? (
+              <>
+                <div className="font-semibold text-forest-900">{name || t('common.farmer')}</div>
+                <div className="text-xs text-forest-600/80 break-all">{auth.email}</div>
+                <div className="mt-1 text-xs font-medium text-emerald-700 flex items-center gap-1"><ShieldCheck size={13} /> {t('profile.loggedIn')}</div>
+              </>
             ) : (
-              <div className="mt-1 text-xs text-earth-700">{t('common.guest')}</div>
+              <>
+                <div className="font-semibold text-forest-900">{t('common.guest')}</div>
+                <div className="text-xs text-forest-600/80 mt-0.5">{t('common.guestNote')}</div>
+              </>
             )}
           </div>
           <button onClick={() => { setOpen(false); nav('/profile'); }} className="w-full flex items-center gap-2.5 rounded-xl px-3 min-h-[44px] hover:bg-cream-100 text-forest-900">
@@ -178,7 +197,7 @@ function ProfileMenu() {
             className={`w-full flex items-center gap-2.5 rounded-xl px-3 min-h-[44px] font-medium ${auth.loggedIn ? 'hover:bg-cream-100 text-forest-900' : 'bg-emerald-600 text-white hover:bg-emerald-500 mt-1'}`}
           >
             {auth.loggedIn ? <LogOut size={18} /> : <LogIn size={18} />}
-            {auth.loggedIn ? t('common.logout') : t('profile.verify')}
+            {auth.loggedIn ? t('common.logout') : t('common.signIn')}
           </button>
         </div>
       )}
@@ -202,6 +221,7 @@ function TopBar() {
           <span className="text-lg font-medium tracking-tight text-forest-900">{current ? t(current.key) : ''}</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
+          <ConnectionStatus />
           <LanguageSwitcher variant="light" className="!border-transparent !bg-cream-100" />
           <NotificationBell />
           <ProfileMenu />
@@ -329,7 +349,7 @@ function MoreSheet({ open, onClose }) {
 export default function AppLayout() {
   const [more, setMore] = useState(false);
   const { pathname } = useLocation();
-  const isChat = pathname === '/assistant';
+  const { dataSaver } = useApp();
   const isHome = pathname === '/';
 
   useEffect(() => {
@@ -337,14 +357,20 @@ export default function AppLayout() {
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  // Data Saver: lighter CSS (no blur/shadows) + reduced motion everywhere.
+  useEffect(() => {
+    document.documentElement.classList.toggle('data-saver', !!dataSaver);
+  }, [dataSaver]);
+
   return (
+    <MotionConfig reducedMotion={dataSaver ? 'always' : 'user'}>
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-72 min-h-screen flex flex-col">
         <TopBar />
         <main
           className={`flex-1 w-full ${
-            isHome ? 'pb-28 lg:pb-0' : `max-w-7xl mx-auto px-4 md:px-8 ${isChat ? 'pt-3 pb-24 lg:pb-6' : 'pt-5 pb-28 lg:pb-10'}`
+            isHome ? 'pb-40 lg:pb-0' : 'max-w-7xl mx-auto px-4 md:px-8 pt-5 pb-40 lg:pb-24'
           }`}
         >
           <motion.div key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
@@ -354,8 +380,10 @@ export default function AppLayout() {
       </div>
       <BottomNav onMore={() => setMore(true)} />
       <MoreSheet open={more} onClose={() => setMore(false)} />
+      <ChatWidget />
       <LoginModal />
       <Toaster />
     </div>
+    </MotionConfig>
   );
 }

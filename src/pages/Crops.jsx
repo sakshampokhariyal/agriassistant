@@ -1,268 +1,249 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Camera, ImagePlus, Plus, ScanLine, Trash2, Lightbulb, CalendarCheck, Wheat, RefreshCw } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  CalendarCheck, CalendarDays, Droplets, Layers, Lightbulb, Pencil, Plus, ScanLine, Sprout, Trash2, Wheat, Mountain, Ruler, AlertTriangle,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import useCropViews from '../hooks/useCropViews';
-import { cropCatalog } from '../data/farmer';
-import { analyzeLeaf } from '../data/ai';
+import { cropCatalog, irrigationOptions, soilOptions } from '../data/farmer';
 import { fmtDate, todayISO } from '../utils/date';
+import { fieldLabel } from '../utils/fields';
 import { Badge, EmptyState, Field, PageHeader, ProgressBar, SectionTitle } from '../components/ui';
 import Modal from '../components/Modal';
 import CropArt from '../components/CropArt';
-import DiseaseResult from '../components/DiseaseResult';
+import FieldTabs from '../components/FieldTabs';
 
 export default function Crops() {
-  const { t, L, lang, addCrop, removeCrop, setCropHealth, toast } = useApp();
-  const crops = useCropViews();
-  const [selected, setSelected] = useState(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [scanCrop, setScanCrop] = useState('ragi');
-  const [photo, setPhoto] = useState(null);
-  const [phase, setPhase] = useState('idle'); // idle | analyzing | done
-  const [result, setResult] = useState(null);
-  const fileRef = useRef(null);
-  const scanRef = useRef(null);
-  const timer = useRef(null);
-  const { hash } = useLocation();
+  const { t, L, lang, activeField, addCrop, updateCrop, removeCrop, toast } = useApp();
+  const views = useCropViews();
+  const [modal, setModal] = useState(null); // null | 'add' | field
 
-  const active = crops.find((c) => c.id === selected) || crops[0];
-
-  useEffect(() => {
-    if (hash === '#scan') setTimeout(() => scanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
-  }, [hash]);
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  const pick = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (!f.type.startsWith('image/')) return toast('Image only', 'error');
-    const url = URL.createObjectURL(f);
-    setPhoto((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return url;
-    });
-    setPhase('idle');
-    setResult(null);
-    e.target.value = '';
-  };
-
-  const analyze = () => {
-    setPhase('analyzing');
-    timer.current = setTimeout(() => {
-      const r = analyzeLeaf(scanCrop);
-      setResult(r);
-      setPhase('done');
-      const target = crops.find((c) => c.cropId === scanCrop);
-      if (target) setCropHealth(target.id, 'watch');
-    }, 2400);
-  };
-
-  const reset = () => {
-    setPhase('idle');
-    setResult(null);
-    setPhoto(null);
-  };
+  const field = views.find((v) => v.id === activeField?.id) || views[0];
 
   return (
     <div>
       <PageHeader
         title={t('crops.title')}
-        subtitle={t('dash.activeCrops')}
+        subtitle={t('fld.sub')}
         action={
-          <button className="btn-primary" onClick={() => setAddOpen(true)}>
-            <Plus size={20} /> {t('crops.addCrop')}
+          <button className="btn-primary" onClick={() => setModal('add')}>
+            <Plus size={20} /> {t('fld.add')}
           </button>
         }
       />
 
-      {crops.length === 0 ? (
+      {views.length === 0 ? (
         <div className="card">
-          <EmptyState icon={Wheat} text={t('crops.empty')} action={<button className="btn-primary" onClick={() => setAddOpen(true)}><Plus size={18} /> {t('crops.addCrop')}</button>} />
+          <EmptyState icon={Wheat} text={t('crops.empty')} action={<button className="btn-primary" onClick={() => setModal('add')}><Plus size={18} /> {t('fld.add')}</button>} />
         </div>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 space-y-5">
-            <div className="grid sm:grid-cols-2 gap-4">
-              {crops.map((c) => {
-                const on = active?.id === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelected(c.id)}
-                    aria-pressed={on}
-                    className={`card overflow-hidden text-left transition hover:shadow-lift ${on ? 'ring-2 ring-forest-500' : ''}`}
-                  >
-                    <CropArt type={c.cat.art} className="h-32 w-full" />
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-extrabold text-lg text-forest-800 leading-tight">{L(c.cat.name)}</h3>
-                          <p className="text-sm text-forest-600/80">{c.acres} {t('common.acres')}</p>
-                        </div>
-                        <Badge tone={c.health === 'healthy' ? 'green' : 'amber'}>
-                          {c.health === 'healthy' ? t('crops.healthy') : t('crops.watch')}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 font-bold text-forest-700">{t('crops.stage')}: <span className="font-semibold">{L(c.stage)}</span></p>
-                      <div className="mt-2"><ProgressBar value={c.progress} /></div>
-                      <div className="mt-2 flex justify-between text-xs text-forest-600/80">
-                        <span>{t('crops.sown')}: {fmtDate(c.sowDate, lang)}</span>
-                        <span>{t('crops.harvest')}: {fmtDate(c.harvestDate, lang)}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+        <>
+          <FieldTabs onAdd={() => setModal('add')} className="mb-5" />
+          <div className="grid lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2 space-y-5 min-w-0">
+              {field && <FieldDetail field={field} onEdit={() => setModal(field)} onRemove={() => { removeCrop(field.id); toast(t('crops.removed'), 'info'); }} />}
             </div>
-
-            {active && (
-              <motion.section key={active.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-5">
-                <SectionTitle icon={Lightbulb}>
-                  {L(active.cat.name)} – {t('crops.tips')}
-                </SectionTitle>
-                <div className="grid sm:grid-cols-3 gap-3 mb-4">
-                  <Info label={t('crops.stage')} value={L(active.stage)} />
-                  <Info label={t('crops.harvest')} value={`${fmtDate(active.harvestDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })}`} />
-                  <Info label={t('weather.irrigation')} value={L(active.cat.waterNeed)} />
-                </div>
-                <ul className="space-y-2.5">
-                  {active.cat.tips.map((tip, i) => (
-                    <li key={i} className="flex gap-2.5 rounded-xl bg-cream-100 p-3">
-                      <CalendarCheck size={20} className="text-forest-500 shrink-0 mt-0.5" aria-hidden />
-                      <span>{L(tip)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    className="btn-ghost !min-h-[44px] text-clay-600 !border-clay-500/40 hover:!bg-clay-100"
-                    onClick={() => {
-                      removeCrop(active.id);
-                      setSelected(null);
-                      toast(t('crops.removed'), 'info');
-                    }}
-                  >
-                    <Trash2 size={18} /> {t('crops.remove')}
-                  </button>
-                </div>
-              </motion.section>
-            )}
+            <div className="space-y-5 min-w-0">
+              <CombinedOverview views={views} />
+            </div>
           </div>
-
-          {/* Scan panel */}
-          <section id="scan" ref={scanRef} className="card p-5 h-fit lg:sticky lg:top-24 scroll-mt-24">
-            <SectionTitle icon={ScanLine}>{t('crops.scan')}</SectionTitle>
-            <p className="text-forest-600/80 text-sm mb-3">{t('crops.scanSub')}</p>
-
-            <div className="mb-3">
-              <span className="label">{t('crops.forCrop')}</span>
-              <div className="flex flex-wrap gap-2">
-                {['ragi', 'tomato', 'maize'].map((id) => (
-                  <button key={id} onClick={() => { setScanCrop(id); setPhase('idle'); setResult(null); }} className={`chip ${scanCrop === id ? 'chip-on' : 'chip-off'}`}>
-                    {L(cropCatalog[id].name).split(' (')[0]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
-            {!photo ? (
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full rounded-2xl border-2 border-dashed border-forest-300 bg-forest-50/60 hover:bg-forest-50 min-h-[180px] grid place-items-center text-forest-600 p-4"
-              >
-                <span className="flex flex-col items-center gap-2 font-bold text-center">
-                  <span className="h-14 w-14 rounded-full bg-white grid place-items-center shadow-card"><Camera size={26} /></span>
-                  {t('crops.dropHere')}
-                  <span className="text-xs font-semibold text-forest-500/80">{t('crops.tryAnother')}</span>
-                </span>
-              </button>
-            ) : (
-              <div className="relative rounded-2xl overflow-hidden bg-forest-900">
-                <img src={photo} alt="" className="w-full max-h-72 object-cover" />
-                {phase === 'analyzing' && (
-                  <>
-                    <div className="absolute inset-0 bg-forest-900/40" />
-                    <div className="scan-line absolute left-0 right-0 h-1 bg-earth-400 shadow-[0_0_16px_4px_rgba(217,162,79,0.8)]" />
-                  </>
-                )}
-              </div>
-            )}
-
-            {photo && phase === 'idle' && (
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <button className="btn-ghost" onClick={() => fileRef.current?.click()}><ImagePlus size={18} /> {t('crops.choosePhoto').split(' ')[0]}</button>
-                <button className="btn-primary" onClick={analyze}><ScanLine size={18} /> {t('crops.analyze')}</button>
-              </div>
-            )}
-            {phase === 'analyzing' && (
-              <p className="mt-3 font-bold text-forest-700 flex items-center gap-2" role="status">
-                <RefreshCw size={18} className="animate-spin" /> {t('crops.analyzing')}
-              </p>
-            )}
-            {phase === 'done' && result && (
-              <div className="mt-4">
-                <DiseaseResult result={result} />
-                <button className="btn-soft w-full mt-4" onClick={reset}><Camera size={18} /> {t('crops.rescan')}</button>
-              </div>
-            )}
-          </section>
-        </div>
+        </>
       )}
 
-      <AddCropModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={(c) => { addCrop(c); setAddOpen(false); toast(t('crops.added')); }} />
+      <FieldModal
+        open={!!modal}
+        field={modal && modal !== 'add' ? modal : null}
+        onClose={() => setModal(null)}
+        onSave={(data) => {
+          if (modal === 'add') {
+            addCrop(data);
+            toast(t('crops.added'));
+          } else {
+            updateCrop(modal.id, data);
+            toast(t('fld.saved'));
+          }
+          setModal(null);
+        }}
+      />
     </div>
   );
 }
 
-function Info({ label, value }) {
+function FieldDetail({ field, onEdit, onRemove }) {
+  const { t, L, lang } = useApp();
   return (
-    <div className="rounded-xl bg-forest-50 p-3">
-      <div className="text-xs font-bold text-forest-500 uppercase tracking-wide">{label}</div>
-      <div className="font-extrabold text-forest-800 mt-0.5">{value}</div>
+    <section className="card overflow-hidden">
+      <CropArt type={field.cat.art} className="h-40 w-full" />
+      <div className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold text-forest-900 leading-tight">{fieldLabel(field, t, L)}</h2>
+            <p className="text-forest-600 mt-0.5">{t('crops.stage')}: <b className="text-forest-800">{L(field.stage)}</b></p>
+          </div>
+          <Badge tone={field.health === 'healthy' ? 'green' : 'amber'}>{field.health === 'healthy' ? t('crops.healthy') : t('crops.watch')}</Badge>
+        </div>
+
+        <div className="mt-4"><ProgressBar value={field.progress} tone="bg-emerald-600" /></div>
+        <div className="mt-1.5 flex justify-between text-xs text-forest-600">
+          <span>{t('crops.sown')}: {fmtDate(field.sowDate, lang)}</span>
+          <span>{field.daysToHarvest} {t('common.daysLeft')}</span>
+          <span>{t('crops.harvest')}: {fmtDate(field.harvestDate, lang)}</span>
+        </div>
+
+        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          <Info icon={Ruler} label={t('fld.area')} value={`${field.acres} ${t('common.acres')}`} />
+          <Info icon={CalendarDays} label={t('crops.sowDate')} value={fmtDate(field.sowDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })} />
+          <Info icon={Mountain} label={t('profile.soil')} value={t(`opt.soil.${field.soil || 'red'}`)} />
+          <Info icon={Droplets} label={t('fld.irrigation')} value={t(`opt.irr.${field.irrigation || 'rainfed'}`)} />
+        </dl>
+
+        <SectionTitle icon={Lightbulb}>{t('crops.tips')}</SectionTitle>
+        <ul className="space-y-2">
+          {field.cat.tips.map((tip, i) => (
+            <li key={i} className="flex gap-2.5 rounded-xl bg-cream-100 p-3 text-forest-800">
+              <CalendarCheck size={18} className="text-emerald-600 shrink-0 mt-0.5" /> <span>{L(tip)}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex flex-wrap gap-2 mt-5">
+          <Link to="/calendar?view=crop" className="btn-primary !min-h-[44px] text-sm"><CalendarDays size={16} /> {t('fld.openCalendar')}</Link>
+          <Link to="/crop-doctor" className="btn-soft !min-h-[44px] text-sm"><ScanLine size={16} /> {t('fld.checkLeaf')}</Link>
+          <button className="btn-ghost !min-h-[44px] text-sm" onClick={onEdit}><Pencil size={16} /> {t('common.edit')}</button>
+          <button className="btn-ghost !min-h-[44px] text-sm !text-red-700 !border-red-200 hover:!bg-red-50 ml-auto" onClick={() => window.confirm(t('fld.removeConfirm')) && onRemove()}>
+            <Trash2 size={16} /> {t('crops.remove')}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Info({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-xl bg-emerald-50/60 p-3">
+      <dt className="text-xs text-forest-600 flex items-center gap-1"><Icon size={13} /> {label}</dt>
+      <dd className="font-semibold text-forest-900 mt-0.5">{value}</dd>
     </div>
   );
 }
 
-function AddCropModal({ open, onClose, onAdd }) {
-  const { t, L } = useApp();
-  const [cropId, setCropId] = useState('ragi');
-  const [acres, setAcres] = useState('1');
-  const [sowDate, setSowDate] = useState(todayISO());
+const BAR_COLORS = ['#059669', '#c98a2b', '#3d8fa8', '#a8452c', '#6b7d33', '#7c3aed'];
 
+/** Combined Field Overview: totals across every field. */
+function CombinedOverview({ views }) {
+  const { t, L, lang, setActiveFieldId } = useApp();
+  const total = views.reduce((s, v) => s + Number(v.acres || 0), 0);
+  const byCrop = useMemo(() => {
+    const m = {};
+    views.forEach((v) => (m[v.cropId] = (m[v.cropId] || 0) + Number(v.acres || 0)));
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [views]);
+  const next = [...views].sort((a, b) => a.daysToHarvest - b.daysToHarvest)[0];
+  const attention = views.filter((v) => v.health !== 'healthy');
+
+  return (
+    <section className="card p-5">
+      <SectionTitle icon={Layers}>{t('fld.overview')}</SectionTitle>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <Stat value={views.length} label={t('fld.fields')} />
+        <Stat value={total.toFixed(1)} label={t('common.acres')} />
+        <Stat value={byCrop.length} label={t('fld.crops')} />
+      </div>
+
+      <div className="mt-4">
+        <div className="flex h-3 rounded-full overflow-hidden bg-cream-200" aria-hidden>
+          {byCrop.map(([id, ac], i) => <div key={id} style={{ width: `${(ac / total) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }} />)}
+        </div>
+        <ul className="mt-2 space-y-1">
+          {byCrop.map(([id, ac], i) => (
+            <li key={id} className="flex items-center gap-2 text-sm">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: BAR_COLORS[i % BAR_COLORS.length] }} />
+              <span className="flex-1 text-forest-800">{L(cropCatalog[id]?.name || id).split(' (')[0]}</span>
+              <span className="text-forest-600">{ac} {t('common.acres')}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {next && (
+        <button onClick={() => setActiveFieldId(next.id)} className="mt-4 w-full text-left rounded-xl bg-cream-100 p-3 hover:bg-emerald-50">
+          <div className="text-xs text-forest-600 flex items-center gap-1"><Sprout size={13} /> {t('fld.nextHarvest')}</div>
+          <div className="font-semibold text-forest-900">{fieldLabel(next, t, L)}</div>
+          <div className="text-sm text-forest-700">{fmtDate(next.harvestDate, lang)} · {next.daysToHarvest} {t('common.daysLeft')}</div>
+        </button>
+      )}
+      {attention.length > 0 && (
+        <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
+          <div className="text-sm font-semibold text-amber-900 flex items-center gap-1.5"><AlertTriangle size={15} /> {t('crops.watch')}</div>
+          <ul className="mt-1 text-sm">
+            {attention.map((v) => (
+              <li key={v.id}><button className="text-amber-900 underline" onClick={() => setActiveFieldId(v.id)}>{fieldLabel(v, t, L)}</button></li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Stat({ value, label }) {
+  return (
+    <div className="rounded-xl bg-emerald-50/60 py-3">
+      <div className="text-2xl font-semibold text-forest-900">{value}</div>
+      <div className="text-xs text-forest-600">{label}</div>
+    </div>
+  );
+}
+
+function FieldModal({ open, field, onClose, onSave }) {
+  const { t, L, profile } = useApp();
+  const blank = { name: '', cropId: 'ragi', acres: '1', sowDate: todayISO(), soil: profile.soil, irrigation: profile.irrigation };
+  const [f, setF] = useState(blank);
   useEffect(() => {
-    if (open) {
-      setCropId('ragi');
-      setAcres('1');
-      setSowDate(todayISO());
-    }
-  }, [open]);
-
+    if (open) setF(field ? { name: field.name || '', cropId: field.cropId, acres: String(field.acres), sowDate: field.sowDate, soil: field.soil || profile.soil, irrigation: field.irrigation || profile.irrigation } : blank);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, field]);
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={t('crops.addCrop')}
+      title={field ? t('fld.edit') : t('fld.add')}
       size="sm"
       footer={
         <>
           <button className="btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
-          <button className="btn-primary" onClick={() => onAdd({ cropId, acres: Math.max(0.1, Number(acres) || 1), sowDate })}>{t('common.add')}</button>
+          <button className="btn-primary" onClick={() => onSave({ ...f, name: f.name.trim(), acres: Math.max(0.1, Number(f.acres) || 1) })}>{t('common.save')}</button>
         </>
       }
     >
       <div className="space-y-4">
+        <Field label={t('fld.name')}>
+          <input className="input" value={f.name} onChange={set('name')} placeholder={t('fld.namePh')} />
+        </Field>
         <Field label={t('crops.selectCrop')}>
-          <select className="input" value={cropId} onChange={(e) => setCropId(e.target.value)}>
+          <select className="input" value={f.cropId} onChange={set('cropId')}>
             {Object.values(cropCatalog).map((c) => <option key={c.id} value={c.id}>{L(c.name)}</option>)}
           </select>
         </Field>
-        <Field label={t('crops.acresLabel') + ` (${t('common.acres')})`}>
-          <input className="input" type="number" min="0.1" step="0.1" value={acres} onChange={(e) => setAcres(e.target.value)} />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={`${t('fld.area')} (${t('common.acres')})`}>
+            <input className="input" type="number" min="0.1" step="0.1" inputMode="decimal" value={f.acres} onChange={set('acres')} />
+          </Field>
+          <Field label={t('crops.sowDate')}>
+            <input className="input" type="date" value={f.sowDate} onChange={set('sowDate')} />
+          </Field>
+        </div>
+        <Field label={t('profile.soil')}>
+          <select className="input" value={f.soil} onChange={set('soil')}>
+            {soilOptions.map((o) => <option key={o} value={o}>{t(`opt.soil.${o}`)}</option>)}
+          </select>
         </Field>
-        <Field label={t('crops.sowDate')}>
-          <input className="input" type="date" value={sowDate} max={todayISO()} onChange={(e) => setSowDate(e.target.value)} />
+        <Field label={t('fld.irrigation')}>
+          <select className="input" value={f.irrigation} onChange={set('irrigation')}>
+            {irrigationOptions.map((o) => <option key={o} value={o}>{t(`opt.irr.${o}`)}</option>)}
+          </select>
         </Field>
       </div>
     </Modal>

@@ -1,6 +1,13 @@
 import en from './en';
 import hi from './hi';
 import kn from './kn';
+import weatherLive from './weatherLive';
+import insurance from './insurance';
+import chat from './chat';
+import features from './features';
+import liveFeeds from './liveFeeds';
+import authEmail from './authEmail';
+import { APP_NAME } from '../config/brand';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English', short: 'EN', locale: 'en-IN' },
@@ -8,15 +15,20 @@ export const LANGUAGES = [
   { code: 'kn', label: 'ಕನ್ನಡ', short: 'ಕ', locale: 'kn-IN' },
 ];
 
-export const dictionaries = { en, hi, kn };
+/** Feature modules keep their own string tables; they are merged into one dictionary per language. */
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail];
+export const dictionaries = Object.fromEntries(
+  Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
+);
 
 export const localeOf = (lang) => LANGUAGES.find((l) => l.code === lang)?.locale || 'en-IN';
 
 /** Translate a UI key. Falls back to English, then the key itself. */
 export function translate(lang, key, vars) {
   let str = dictionaries[lang]?.[key] ?? dictionaries.en[key] ?? key;
-  if (vars) Object.entries(vars).forEach(([k, v]) => (str = str.replace(`{${k}}`, v)));
-  return str;
+  if (vars) Object.entries(vars).forEach(([k, v]) => (str = str.split(`{${k}}`).join(v)));
+  // Brand token: every string writes {app}, so the product name lives only in config/brand.js.
+  return str.split('{app}').join(APP_NAME);
 }
 
 /** Pick the right language from a localized content object ({en, hi, kn}) or return a plain string. */

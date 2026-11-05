@@ -7,8 +7,40 @@ import { addDays, fmtDate, parseISO, toISO, todayISO } from '../utils/date';
 import { localeOf } from '../translations';
 import { Badge, EmptyState, Field, PageHeader, SectionTitle } from '../components/ui';
 import Modal from '../components/Modal';
+import CropCalendar from '../components/calendar/CropCalendar';
+import { useSearchParams } from 'react-router-dom';
+import { Sprout, ListChecks } from 'lucide-react';
 
+/** Calendar tab: Crop Calendar (auto-generated per field) + Farm Tasks (manual). */
 export default function Calendar() {
+  const { t } = useApp();
+  const [params, setParams] = useSearchParams();
+  const view = params.get('view') === 'tasks' ? 'tasks' : 'crop';
+  return (
+    <div>
+      <div className="flex gap-2 mb-4" role="tablist" aria-label={t('calendar.title')}>
+        {[
+          ['crop', Sprout, 'cc.title'],
+          ['tasks', ListChecks, 'cc.tasksTab'],
+        ].map(([id, Icon, key]) => (
+          <button key={id} role="tab" aria-selected={view === id} onClick={() => setParams({ view: id }, { replace: true })} className={`chip !min-h-[48px] !px-5 ${view === id ? 'chip-on' : 'chip-off'}`}>
+            <Icon size={18} /> {t(key)}
+          </button>
+        ))}
+      </div>
+      {view === 'crop' ? (
+        <>
+          <PageHeader title={t('cc.title')} subtitle={t('cc.sub')} />
+          <CropCalendar />
+        </>
+      ) : (
+        <TaskCalendar />
+      )}
+    </div>
+  );
+}
+
+function TaskCalendar() {
   const { t, L, lang, tasks, addTask, toggleTask, deleteTask, toast, crops } = useApp();
   const today = todayISO();
   const [month, setMonth] = useState(() => {

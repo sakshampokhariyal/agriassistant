@@ -1,5 +1,5 @@
 const kn = {
-  'app.name': 'ಕೃಷಿ ಸಖ',
+  'app.name': '{app}',
   'app.tagline': 'ನಿಮ್ಮ ಕೃಷಿ ಸಂಗಾತಿ',
   'nav.dashboard': 'ಮುಖಪುಟ',
   'nav.assistant': 'ಸಹಾಯಕ',
@@ -38,7 +38,10 @@ const kn = {
   'common.search': 'ಹುಡುಕಿ',
   'common.details': 'ವಿವರ',
   'common.hideDetails': 'ವಿವರ ಮರೆಮಾಡಿ',
-  'common.guest': 'ಡೆಮೊ ರೈತ',
+  'common.guest': 'ಅತಿಥಿ',
+  'common.farmer': 'ರೈತ',
+  'common.signIn': 'ಸೈನ್ ಇನ್',
+  'common.guestNote': 'ನೀವು ಅತಿಥಿಯಾಗಿ ನೋಡುತ್ತಿದ್ದೀರಿ. ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಖಾತೆಗೆ ಉಳಿಸಲು ಸೈನ್ ಇನ್ ಮಾಡಿ.',
   'common.noData': 'ಇನ್ನೂ ಏನೂ ಇಲ್ಲ',
 
   'greet.morning': 'ಶುಭೋದಯ',
@@ -145,7 +148,7 @@ const kn = {
   'assistant.voice': 'ಧ್ವನಿ ಮೂಲಕ ಕೇಳಿ',
   'assistant.clear': 'ಚಾಟ್ ಅಳಿಸಿ',
   'assistant.you': 'ನೀವು',
-  'assistant.bot': 'ಸಖ',
+  'assistant.bot': '{app}',
   'assistant.analyzingPhoto': 'ನಿಮ್ಮ ಬೆಳೆ ಫೋಟೋ ಪರೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ…',
   'assistant.photoSent': 'ಬೆಳೆ ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಆಗಿದೆ',
   'assistant.cleared': 'ಚಾಟ್ ಅಳಿಸಲಾಗಿದೆ',

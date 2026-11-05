@@ -10,6 +10,10 @@ import Calendar from './pages/Calendar';
 import Community from './pages/Community';
 import Profile from './pages/Profile';
 import Announcements from './pages/Announcements';
+import Insurance from './pages/Insurance';
+import CropDoctor from './pages/CropDoctor';
+import Help from './pages/Help';
+import Settings from './pages/Settings';
 
 export default function App() {
   return (
@@ -24,6 +28,10 @@ export default function App() {
         <Route path="calendar" element={<Calendar />} />
         <Route path="community" element={<Community />} />
         <Route path="announcements" element={<Announcements />} />
+        <Route path="insurance" element={<Insurance />} />
+        <Route path="crop-doctor" element={<CropDoctor />} />
+        <Route path="help" element={<Help />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
