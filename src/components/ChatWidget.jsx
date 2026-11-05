@@ -78,7 +78,7 @@ export default function ChatWidget() {
 }
 
 function ChatPanel({ onClose }) {
-  const { t, L, lang, profile, toast } = useApp();
+  const { t, L, lang, profile, toast, activeField } = useApp();
   const { pendingAsk, clearPending } = useChat();
   const weather = useWeather();
   const weatherRef = useRef(weather);
@@ -179,15 +179,49 @@ function ChatPanel({ onClose }) {
     [setMessages, lang, buildContext]
   );
 
+  /**
+   * Photo question → vision model (qwen/qwen3.8-27b) with the image as a base64 data URL.
+   * If Groq can't answer, fall back to the simulated local diagnosis so a demo never breaks.
+   */
+  const replyImage = useCallback(
+    async (userText, image) => {
+      setBusy(true);
+      try {
+        const history = messagesRef.current
+          .slice(-6)
+          .map((m) => (m.role === 'user' && m.text ? { role: 'user', content: m.text } : m.role === 'bot' && m.text ? { role: 'assistant', content: m.text } : null))
+          .filter(Boolean);
+        history.push({ role: 'user', content: userText || t('chat.photoDefaultQ') });
+        const text = await askGroq(history, { lang, context: buildContext(), image });
+        setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', text, source: 'groq', vision: true }]);
+      } catch {
+        await delay(700);
+        setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', analysis: activeField?.cropId || 'ragi' }]);
+      }
+      if (mounted.current) setBusy(false);
+    },
+    [setMessages, lang, buildContext, t, activeField?.cropId]
+  );
+
   const send = useCallback(
-    (text) => {
+    async (text) => {
       const msg = (text ?? input).trim();
-      if (!msg || busy) return;
+      if (busy || (!msg && !photo)) return;
+      if (photo) {
+        const attached = photo;
+        setPhoto(null);
+        setInput('');
+        // Small thumbnail for the chat history (localStorage), larger copy for the AI.
+        const [thumb, full] = await Promise.all([shrink(attached.url), shrink(attached.url, 1024, 0.82)]);
+        setMessages((m) => [...m, { id: `u${Date.now()}`, role: 'user', image: thumb, text: msg }]);
+        replyImage(msg, full);
+        return;
+      }
       setMessages((m) => [...m, { id: `u${Date.now()}`, role: 'user', text: msg }]);
       setInput('');
       reply(msg);
     },
-    [input, busy, setMessages, reply]
+    [input, busy, photo, setMessages, reply, replyImage]
   );
 
   // Questions sent from elsewhere (dashboard search, "Ask the assistant" buttons).
@@ -202,22 +236,15 @@ function ChatPanel({ onClose }) {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    if (!f.type.startsWith('image/')) return toast('Image only', 'error');
+    if (!/^image\/(jpeg|png)$/.test(f.type)) return toast(t('chat.imageOnly'), 'error');
+    // Base64 data URL – previewed now, sent to the AI with the message.
     const reader = new FileReader();
-    reader.onload = () => setPhoto({ url: reader.result });
+    reader.onload = () => {
+      setPhoto({ url: reader.result, name: f.name });
+      inputRef.current?.focus();
+    };
+    reader.onerror = () => toast(t('chat.imageOnly'), 'error');
     reader.readAsDataURL(f);
-  };
-
-  const sendPhoto = async () => {
-    if (!photo || busy) return;
-    const thumb = await shrink(photo.url); // small thumbnail keeps localStorage light
-    setMessages((m) => [...m, { id: `u${Date.now()}`, role: 'user', image: thumb }]);
-    setPhoto(null);
-    setBusy(true);
-    await delay(2200);
-    setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', analysis: 'ragi' }]);
-    if (mounted.current) setBusy(false);
-    toast(t('assistant.photoSent'));
   };
 
   /* ── Voice input: Web Speech API → live transcript in the text box (the farmer reviews, then sends) ── */
@@ -450,14 +477,23 @@ function ChatPanel({ onClose }) {
       <AnimatePresence>
         {photo && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-white border-t border-black/[0.06]">
-            <div className="p-3 flex items-center gap-3">
-              <img src={photo.url} alt="" className="h-14 w-14 rounded-xl object-cover" />
-              <div className="flex-1 min-w-0">
-                <button onClick={sendPhoto} className="btn-primary !min-h-[40px] text-sm">{t('assistant.sendPhoto')}</button>
+            <div className="px-3 pt-3 pb-1 flex items-center gap-3">
+              <div className="relative shrink-0">
+                <img src={photo.url} alt={t('chat.photoAttached')} className="h-16 w-16 rounded-xl object-cover border border-black/[0.08]" />
+                <button
+                  type="button"
+                  onClick={() => setPhoto(null)}
+                  aria-label={t('assistant.removePhoto')}
+                  title={t('assistant.removePhoto')}
+                  className="absolute -top-2 -right-2 h-7 w-7 grid place-items-center rounded-full bg-forest-900 text-white shadow"
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <button onClick={() => setPhoto(null)} aria-label={t('assistant.removePhoto')} className="h-10 w-10 grid place-items-center rounded-full hover:bg-forest-50">
-                <X size={18} />
-              </button>
+              <div className="min-w-0 text-sm">
+                <p className="font-semibold text-forest-900 truncate">{t('chat.photoAttached')}</p>
+                <p className="text-forest-600 text-xs">{t('chat.photoHint')}</p>
+              </div>
             </div>
           </motion.div>
         )}
@@ -487,8 +523,8 @@ function ChatPanel({ onClose }) {
         }}
         className="flex items-center gap-1.5 p-2.5 border-t border-black/[0.06] bg-white pb-[max(0.625rem,env(safe-area-inset-bottom))]"
       >
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
-        <button type="button" onClick={() => fileRef.current?.click()} aria-label={t('assistant.photo')} title={t('assistant.photo')} className="h-11 w-11 shrink-0 rounded-full bg-forest-50 text-forest-700 grid place-items-center hover:bg-forest-100">
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={onFile} />
+        <button type="button" onClick={() => fileRef.current?.click()} aria-label={t('chat.attachPhoto')} title={t('chat.attachPhoto')} className={`h-11 w-11 shrink-0 rounded-full grid place-items-center ${photo ? 'bg-emerald-600 text-white' : 'bg-forest-50 text-forest-700 hover:bg-forest-100'}`}>
           <Camera size={20} />
         </button>
         <label className="sr-only" htmlFor="chat-input">{t('assistant.placeholder')}</label>
@@ -497,7 +533,7 @@ function ChatPanel({ onClose }) {
           id="chat-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={listening ? t('chat.listeningPh') : t('assistant.placeholder')}
+          placeholder={listening ? t('chat.listeningPh') : photo ? t('chat.photoPh') : t('assistant.placeholder')}
           className={`input !rounded-full min-w-0 !min-h-[44px] ${listening ? '!border-red-300 !ring-2 !ring-red-200' : ''}`}
           autoComplete="off"
         />
@@ -511,7 +547,7 @@ function ChatPanel({ onClose }) {
         >
           {listening ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
         </button>
-        <button disabled={!input.trim() || busy} aria-label={t('common.send')} className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white grid place-items-center hover:bg-emerald-500 disabled:opacity-40">
+        <button disabled={(!input.trim() && !photo) || busy} aria-label={t('common.send')} className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white grid place-items-center hover:bg-emerald-500 disabled:opacity-40">
           <Send size={18} />
         </button>
       </form>
@@ -532,7 +568,7 @@ function Bubble({ role, label, children }) {
   );
 }
 
-function shrink(dataUrl, max = 280) {
+function shrink(dataUrl, max = 280, quality = 0.7) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -541,7 +577,7 @@ function shrink(dataUrl, max = 280) {
       c.width = Math.round(img.width * s);
       c.height = Math.round(img.height * s);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL('image/jpeg', 0.7));
+      resolve(c.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;

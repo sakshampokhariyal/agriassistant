@@ -50,6 +50,6 @@ src/
 
 ## Live official feeds
 - **Market → Live mandi prices**: Agmarknet "Current Daily Price of Various Commodities from Various Markets (Mandi)" via data.gov.in (`src/services/agmarknet.js`). Falls back to cached official data, then demo data, with clear labels.
-- **Announcements**: PIB press-release RSS (`src/services/pib.js`), filtered for agriculture; releases are tagged "Verified · PIB" and "Advice from Agriculture Department" when from the Agriculture Ministry.
-- Neither source allows direct browser calls (no CORS), so `vite.config.js` proxies them at `/proxy/datagov` and `/proxy/pib` for `npm run dev` and `npm run preview`.
+- **Announcements**: live agriculture headlines from Indian publishers via newsdata.io (`src/services/news.js`), in the app language; `NEWSDATA_API_KEY` is added server-side by the `/proxy/newsdata` proxy.
+- These sources don't allow direct browser calls (no CORS / secret keys), so `vite.config.js` proxies them at `/proxy/datagov` and `/proxy/newsdata` for `npm run dev` and `npm run preview`.
 - Put your data.gov.in key in `.env.local` as `DATA_GOV_API_KEY=...` (see `.env.example`). The proxy adds it server-side, so it is never shipped in the website bundle. **For production hosting, deploy an equivalent proxy** (e.g. a serverless function) – static hosting alone cannot reach these feeds.

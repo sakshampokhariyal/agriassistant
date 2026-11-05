@@ -9,6 +9,8 @@
  * Fertilizer amounts are given per hectare (as in the source) with per-acre equivalents
  * (1 ha = 2.47 acres; urea = 46% N).
  */
+import { cropStages } from './cropMasterData';
+
 const L = (en, hi, kn) => ({ en, hi, kn });
 
 /** Task types (tag colour + icon in the UI). */
@@ -20,16 +22,11 @@ const paddy = {
   establishment: 'transplant',
   defaultVariant: 'medium',
   variants: {
-    short: { D: 105, T: 18, tEnd: 20, spacing: '15 × 10 cm', range: '95–115', examples: 'Jyothi, Kairali', name: L('Short duration', 'कम अवधि', 'ಅಲ್ಪಾವಧಿ') },
-    medium: { D: 125, T: 20, tEnd: 25, spacing: '20 × 15 cm', range: '115–135', examples: 'Jaya, Uma', name: L('Medium duration', 'मध्यम अवधि', 'ಮಧ್ಯಮಾವಧಿ') },
+    short: { D: 105, T: 18, tStart: 18, tEnd: 20, spacing: '15 × 10 cm', range: '95–115', examples: 'Jyothi, Kairali', name: L('Short duration', 'कम अवधि', 'ಅಲ್ಪಾವಧಿ') },
+    medium: { D: 120, T: 22, tStart: 20, tEnd: 25, spacing: '20 × 15 cm', range: '115–135', examples: 'Jaya, Uma', name: L('Medium duration', 'मध्यम अवधि', 'ಮಧ್ಯಮಾವಧಿ') },
   },
-  phases: ({ T, D }) => [
-    { key: 'nursery', start: 0, end: T, name: L('Nursery', 'नर्सरी', 'ಸಸಿಮಡಿ') },
-    { key: 'establish', start: T, end: T + 20, name: L('Transplanting & establishment', 'रोपाई व स्थापना', 'ನಾಟಿ ಮತ್ತು ಸ್ಥಾಪನೆ') },
-    { key: 'tillering', start: T + 20, end: T + 45, name: L('Active tillering', 'कल्ले निकलना', 'ಕವಲೊಡೆಯುವ ಹಂತ') },
-    { key: 'panicle', start: T + 45, end: D - 25, name: L('Panicle initiation & flowering', 'बाली बनना व फूल', 'ತೆನೆ ಮೂಡುವಿಕೆ ಮತ್ತು ಹೂ') },
-    { key: 'maturity', start: D - 25, end: D + 5, name: L('Grain filling & maturity', 'दाना भरना व पकना', 'ಕಾಳು ತುಂಬುವಿಕೆ ಮತ್ತು ಪಕ್ವತೆ') },
-  ],
+  // Stage boundaries come from data/cropMasterData.js (single source of truth).
+  phases: (p) => cropStages('paddy', p.D),
   tasks: [
     {
       key: 'nursery', day: 0, type: 'nursery', priority: 'high',
@@ -118,13 +115,8 @@ const maize = {
   establishment: 'direct',
   variants: { std: { D: 100, range: '90–110', examples: 'Ganga, Deccan (hybrids); Kissan, Amber (composites)' } },
   defaultVariant: 'std',
-  phases: ({ D }) => [
-    { key: 'emergence', start: 0, end: 10, name: L('Sowing & emergence', 'बुवाई व अंकुरण', 'ಬಿತ್ತನೆ ಮತ್ತು ಮೊಳಕೆ') },
-    { key: 'earlyVeg', start: 10, end: 30, name: L('Early vegetative', 'प्रारंभिक वृद्धि', 'ಆರಂಭಿಕ ಬೆಳವಣಿಗೆ') },
-    { key: 'kneeHigh', start: 30, end: 55, name: L('Knee-high', 'घुटने तक ऊंचाई', 'ಮೊಣಕಾಲು ಎತ್ತರ') },
-    { key: 'tassel', start: 55, end: 75, name: L('Tasseling & silking', 'झंडा व रेशा निकलना', 'ತೆನೆ ಗೊಂಚಲು ಮತ್ತು ರೇಷ್ಮೆ') },
-    { key: 'maturity', start: 75, end: D + 5, name: L('Grain filling & maturity', 'दाना भरना व पकना', 'ಕಾಳು ತುಂಬುವಿಕೆ ಮತ್ತು ಪಕ್ವತೆ') },
-  ],
+  // Stage boundaries come from data/cropMasterData.js (single source of truth).
+  phases: (p) => cropStages('maize', p.D),
   tasks: [
     {
       key: 'sow', day: 0, type: 'sowing', priority: 'critical',
@@ -189,13 +181,8 @@ const ragi = {
   establishment: 'transplant',
   variants: { std: { D: 110, T: 21, range: '100–120', examples: 'GPU-28, ML-365' } },
   defaultVariant: 'std',
-  phases: ({ T, D }) => [
-    { key: 'nursery', start: 0, end: T, name: L('Nursery', 'नर्सरी', 'ಸಸಿಮಡಿ') },
-    { key: 'establish', start: T, end: T + 21, name: L('Transplanting & establishment', 'रोपाई व स्थापना', 'ನಾಟಿ ಮತ್ತು ಸ್ಥಾಪನೆ') },
-    { key: 'tillering', start: T + 21, end: T + 50, name: L('Tillering', 'कल्ले निकलना', 'ಕವಲೊಡೆಯುವ ಹಂತ') },
-    { key: 'heading', start: T + 50, end: 95, name: L('Heading & flowering', 'बाली व फूल', 'ತೆನೆ ಮತ್ತು ಹೂ') },
-    { key: 'maturity', start: 95, end: D + 5, name: L('Grain filling & maturity', 'दाना भरना व पकना', 'ಕಾಳು ತುಂಬುವಿಕೆ ಮತ್ತು ಪಕ್ವತೆ') },
-  ],
+  // Stage boundaries come from data/cropMasterData.js (single source of truth).
+  phases: (p) => cropStages('ragi', p.D),
   tasks: [
     {
       key: 'nursery', day: 0, type: 'nursery', priority: 'high',
@@ -255,13 +242,8 @@ const groundnut = {
   establishment: 'direct',
   variants: { std: { D: 110, range: '100–115', examples: 'TMV-2, TMV-7, TG-3, TG-14' } },
   defaultVariant: 'std',
-  phases: ({ D }) => [
-    { key: 'emergence', start: 0, end: 15, name: L('Sowing & emergence', 'बुवाई व अंकुरण', 'ಬಿತ್ತನೆ ಮತ್ತು ಮೊಳಕೆ') },
-    { key: 'vegetative', start: 15, end: 30, name: L('Vegetative', 'वानस्पतिक वृद्धि', 'ಸಸ್ಯ ಬೆಳವಣಿಗೆ') },
-    { key: 'pegging', start: 30, end: 45, name: L('Flowering & pegging', 'फूल व सुई बनना', 'ಹೂ ಮತ್ತು ಬಿಳಲು ಇಳಿಯುವಿಕೆ') },
-    { key: 'pods', start: 45, end: 90, name: L('Pod development', 'फली बनना', 'ಕಾಯಿ ಬೆಳವಣಿಗೆ') },
-    { key: 'maturity', start: 90, end: D + 5, name: L('Maturity', 'पकना', 'ಪಕ್ವತೆ') },
-  ],
+  // Stage boundaries come from data/cropMasterData.js (single source of truth).
+  phases: (p) => cropStages('groundnut', p.D),
   /** Rules that apply over a period rather than on one day. */
   constraints: [
     {
@@ -342,16 +324,11 @@ const groundnut = {
 const tomato = {
   sci: 'Solanum lycopersicum',
   establishment: 'transplant',
-  // Field life ≈ 120 days after transplanting (110–135 days for the main crop).
-  variants: { std: { D: 145, T: 25, tEnd: 30, range: '110–135', examples: 'Arka Rakshak, Arka Samrat' } },
+  // Nursery 25–30 days (DAP counted from day 28), total ≈ 125 days.
+  variants: { std: { D: 125, T: 28, tStart: 25, tEnd: 30, range: '110–135', examples: 'Arka Rakshak, Arka Samrat' } },
   defaultVariant: 'std',
-  phases: ({ T, D }) => [
-    { key: 'nursery', start: 0, end: T, name: L('Nursery', 'नर्सरी', 'ಸಸಿಮಡಿ') },
-    { key: 'establish', start: T, end: T + 20, name: L('Transplanting & establishment', 'रोपाई व स्थापना', 'ನಾಟಿ ಮತ್ತು ಸ್ಥಾಪನೆ') },
-    { key: 'vegetative', start: T + 20, end: T + 40, name: L('Active vegetative', 'तेज़ वृद्धि', 'ಚುರುಕು ಬೆಳವಣಿಗೆ') },
-    { key: 'flowering', start: T + 40, end: T + 70, name: L('Flowering & fruit set', 'फूल व फल लगना', 'ಹೂ ಮತ್ತು ಕಾಯಿ ಕಟ್ಟುವಿಕೆ') },
-    { key: 'harvest', start: T + 70, end: D + 1, name: L('Fruiting & staggered harvest', 'फल व क्रमिक तुड़ाई', 'ಕಾಯಿ ಮತ್ತು ಹಂತ ಹಂತದ ಕೊಯ್ಲು') },
-  ],
+  // Stage boundaries come from data/cropMasterData.js (single source of truth).
+  phases: (p) => cropStages('tomato', p.D),
   tasks: [
     {
       key: 'nursery', day: 0, type: 'nursery', priority: 'high',
@@ -418,7 +395,7 @@ export function scheduleParams(field) {
   if (!s) return null;
   const variantKey = s.variants[field.variant] ? field.variant : s.defaultVariant;
   const v = s.variants[variantKey];
-  return { ...v, variantKey, T: v.T ?? 0, tEnd: v.tEnd ?? v.T ?? 0 };
+  return { ...v, variantKey, T: v.T ?? 0, tStart: v.tStart ?? v.T ?? 0, tEnd: v.tEnd ?? v.T ?? 0 };
 }
 
 /** Phase list with day bounds for a field, or null when the crop has no schedule. */

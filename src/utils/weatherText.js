@@ -1,8 +1,12 @@
+import { savedPlaceNear } from '../services/location';
 import { fmtDate, todayISO } from './date';
 
 /** Human label for where the weather is from. */
 export function placeLabel(w, t) {
   if (w?.source === 'gps' && w.coords) {
+    // Name the place when the device location has been reverse-geocoded (services/location.js).
+    const named = savedPlaceNear(w.coords);
+    if (named) return named.label;
     return t('wx.locGps', { lat: w.coords.lat.toFixed(2), lon: w.coords.lon.toFixed(2) });
   }
   return t('wx.locDefault');

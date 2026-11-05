@@ -22,7 +22,8 @@ const fill = (obj, vars) =>
 
 /** Day bounds (DAS) for a task template. */
 function window(tpl, p) {
-  const val = (x) => (x === 'T' ? p.T : x === 'tEnd' ? p.tEnd : x);
+  // 'T' in a day window = first transplanting day (tStart); DAP is still counted from T.
+  const val = (x) => (x === 'T' ? p.tStart : x === 'tEnd' ? p.tEnd : x);
   if (tpl.dap != null) return [p.T + tpl.dap, p.T + (tpl.dapEnd ?? tpl.dap)];
   if (tpl.fromHarvest != null) return [p.D - tpl.fromHarvest, p.D - (tpl.fromHarvestEnd ?? tpl.fromHarvest)];
   const start = val(tpl.day);
@@ -35,7 +36,9 @@ function expand(field, p) {
   const vars = { spacing: p.spacing || '', variant: p.name || '' };
   const out = [];
   s.tasks.forEach((tpl) => {
-    const [start, end] = window(tpl, p);
+    const [start, rawEnd] = window(tpl, p);
+    // Repeating work (irrigation rounds, pickings) stops at the end of the crop.
+    const end = tpl.repeat ? Math.min(rawEnd, p.D) : rawEnd;
     const base = { key: tpl.key, type: tpl.type, priority: tpl.priority, title: tpl.title, detail: fill(tpl.detail, vars) };
     if (tpl.repeat) {
       let n = 1;

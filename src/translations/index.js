@@ -10,6 +10,10 @@ import authEmail from './authEmail';
 import community from './community';
 import phoneAuth from './phoneAuth';
 import schedule from './schedule';
+import news from './news';
+import cropMaster from './cropMaster';
+import vision from './vision';
+import location from './location';
 import { APP_NAME } from '../config/brand';
 
 export const LANGUAGES = [
@@ -19,7 +23,7 @@ export const LANGUAGES = [
 ];
 
 /** Feature modules keep their own string tables; they are merged into one dictionary per language. */
-const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule];
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location];
 export const dictionaries = Object.fromEntries(
   Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
 );

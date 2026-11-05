@@ -4,6 +4,8 @@
  * classification; recommended doses from UAS Bangalore package of practices; pest guidance
  * summarised from ICAR / UAS extension material. Always confirm locally.
  */
+import { HA_PER_ACRE, NPK_BASELINES } from './cropMasterData';
+
 const L = (en, hi, kn) => ({ en, hi, kn });
 
 /* ───────────── Helplines ───────────── */
@@ -62,17 +64,10 @@ export const rateLevel = (nutrient, value) => {
   return v < low ? 'low' : v > high ? 'high' : 'medium';
 };
 
-/** Recommended N–P₂O₅–K₂O (kg/ha) – UAS Bangalore package of practices (simplified). */
-export const RDF = {
-  ragiIrrigated: { N: 100, P: 50, K: 50, name: L('Ragi (irrigated)', 'रागी (सिंचित)', 'ರಾಗಿ (ನೀರಾವರಿ)') },
-  ragiRainfed: { N: 50, P: 40, K: 25, name: L('Ragi (rainfed)', 'रागी (वर्षा आधारित)', 'ರಾಗಿ (ಮಳೆ ಆಶ್ರಿತ)') },
-  paddy: { N: 100, P: 50, K: 50, name: L('Paddy (irrigated)', 'धान (सिंचित)', 'ಭತ್ತ (ನೀರಾವರಿ)') },
-  maize: { N: 150, P: 75, K: 40, name: L('Maize (irrigated)', 'मक्का (सिंचित)', 'ಮೆಕ್ಕೆಜೋಳ (ನೀರಾವರಿ)') },
-  tomato: { N: 115, P: 100, K: 60, name: L('Tomato (open-pollinated)', 'टमाटर (सामान्य किस्म)', 'ಟೊಮೆಟೊ (ಸಾಮಾನ್ಯ ತಳಿ)') },
-  groundnut: { N: 25, P: 50, K: 25, name: L('Groundnut (rainfed)', 'मूंगफली (वर्षा आधारित)', 'ಕಡಲೆಕಾಯಿ (ಮಳೆ ಆಶ್ರಿತ)') },
-};
+/** Recommended N–P₂O₅–K₂O (kg/ha) baselines live in the crop master data. */
+export const RDF = NPK_BASELINES;
 
-export const HA_PER_ACRE = 0.4047;
+export { HA_PER_ACRE };
 export const BAG_KG = { urea: 45, dap: 50, mop: 50 };
 
 /**

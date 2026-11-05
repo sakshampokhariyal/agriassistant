@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarCheck, CalendarDays, Droplets, Layers, Lightbulb, Pencil, Plus, ScanLine, Sprout, Trash2, Wheat, Mountain, Ruler, AlertTriangle,
+  AlertOctagon, Bug, CalendarClock, CloudRain, Sun,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useWeather } from '../context/WeatherContext';
+import { scheduleParams } from '../data/cropSchedules';
+import { cropRecommendations } from '../data/cropMasterData';
 import useCropViews from '../hooks/useCropViews';
 import { cropCatalog, irrigationOptions, soilOptions } from '../data/farmer';
 import { fmtDate, todayISO } from '../utils/date';
@@ -89,7 +93,7 @@ function FieldDetail({ field, onEdit, onRemove }) {
         <div className="mt-4"><ProgressBar value={field.progress} tone="bg-emerald-600" /></div>
         <div className="mt-1.5 flex justify-between text-xs text-forest-600">
           <span>{t('crops.sown')}: {fmtDate(field.sowDate, lang)}</span>
-          <span>{field.daysToHarvest} {t('common.daysLeft')}</span>
+          <span>{field.elapsed >= 0 ? `${t('crops.advice.dayOf', { n: Math.min(field.elapsed, field.duration), d: field.duration })} · ` : ''}{field.daysToHarvest} {t('common.daysLeft')}</span>
           <span>{t('crops.harvest')}: {fmtDate(field.harvestDate, lang)}</span>
         </div>
 
@@ -100,14 +104,7 @@ function FieldDetail({ field, onEdit, onRemove }) {
           <Info icon={Droplets} label={t('fld.irrigation')} value={t(`opt.irr.${field.irrigation || 'rainfed'}`)} />
         </dl>
 
-        <SectionTitle icon={Lightbulb}>{t('crops.tips')}</SectionTitle>
-        <ul className="space-y-2">
-          {field.cat.tips.map((tip, i) => (
-            <li key={i} className="flex gap-2.5 rounded-xl bg-cream-100 p-3 text-forest-800">
-              <CalendarCheck size={18} className="text-emerald-600 shrink-0 mt-0.5" /> <span>{L(tip)}</span>
-            </li>
-          ))}
-        </ul>
+        <StageAdvice field={field} />
 
         <div className="flex flex-wrap gap-2 mt-5">
           <Link to="/calendar?view=crop" className="btn-primary !min-h-[44px] text-sm"><CalendarDays size={16} /> {t('fld.openCalendar')}</Link>
@@ -119,6 +116,68 @@ function FieldDetail({ field, onEdit, onRemove }) {
         </div>
       </div>
     </section>
+  );
+}
+
+const ADVICE_KIND = {
+  action: { icon: CalendarCheck, box: 'bg-cream-100 text-forest-800', iconCls: 'text-emerald-600' },
+  pest: { icon: Bug, box: 'bg-violet-50 text-forest-800', iconCls: 'text-violet-600' },
+  critical: { icon: AlertOctagon, box: 'bg-red-50 border border-red-200 text-red-900', iconCls: 'text-red-600' },
+  harvest: { icon: Wheat, box: 'bg-amber-50 text-forest-800', iconCls: 'text-amber-700' },
+};
+
+/** Stage-specific recommendations for the field's current day, plus live-weather hints. */
+function StageAdvice({ field }) {
+  const { t, L } = useApp();
+  const weather = useWeather();
+  const params = scheduleParams(field);
+  const recs = cropRecommendations(field.cropId, params);
+  const day = field.elapsed;
+  const active = recs.filter((r) => day >= r.from && day <= r.to);
+  const next = recs.filter((r) => r.from > day).sort((a, b) => a.from - b.from)[0];
+
+  const d0 = weather?.data?.daily?.[0];
+  const hints = [];
+  if (weather?.decision?.status === 'doNot' && d0) hints.push({ key: 'rain', icon: CloudRain, text: t('crops.advice.rain', { prob: d0.prob ?? '–' }) });
+  if (d0?.hi != null && d0.hi >= 34) hints.push({ key: 'heat', icon: Sun, text: t('crops.advice.heat', { temp: Math.round(d0.hi) }) });
+
+  return (
+    <>
+      <SectionTitle icon={Lightbulb}>{t('crops.advice.title')}</SectionTitle>
+      <p className="text-sm text-forest-700 -mt-1 mb-2">
+        {day < 0 ? t('crops.advice.notSown', { n: -day }) : t('crops.advice.dayStage', { n: day, stage: L(field.stage) })}
+      </p>
+      <ul className="space-y-2">
+        {active.map((r) => {
+          const k = ADVICE_KIND[r.kind] || ADVICE_KIND.action;
+          const Icon = k.icon;
+          return (
+            <li key={r.key} className={`flex gap-2.5 rounded-xl p-3 ${k.box}`}>
+              <Icon size={18} className={`shrink-0 mt-0.5 ${k.iconCls}`} />
+              <span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-75">{t(`crops.advice.kind.${r.kind}`)}</span>
+                {L(r.text)}
+              </span>
+            </li>
+          );
+        })}
+        {active.length === 0 && <li className="rounded-xl bg-cream-100 p-3 text-forest-700">{t('crops.advice.none')}</li>}
+        {next && (
+          <li className="flex gap-2.5 rounded-xl border border-dashed border-black/[0.1] p-3 text-forest-700">
+            <CalendarClock size={18} className="shrink-0 mt-0.5 text-forest-500" />
+            <span>
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-forest-600">{next.from - day === 1 ? t('crops.advice.nextTomorrow') : t('crops.advice.next', { n: next.from - day })}</span>
+              {L(next.text)}
+            </span>
+          </li>
+        )}
+        {hints.map(({ key, icon: Icon, text }) => (
+          <li key={key} className="flex gap-2.5 rounded-xl bg-sky-100/70 p-3 text-forest-800">
+            <Icon size={18} className="shrink-0 mt-0.5 text-sky-500" /> <span>{text}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

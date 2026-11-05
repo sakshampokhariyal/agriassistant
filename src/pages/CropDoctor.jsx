@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Camera, CalendarPlus, CheckCircle2, FlaskConical, ImagePlus, Leaf, RefreshCw, ScanLine, ShieldAlert, Sprout, Sun, Focus, Maximize, Hand, AlertTriangle,
+  Sparkles, HelpCircle, ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { diagnose } from '../data/diagnosis';
+import { diagnose, recheck, removeLeaves, sprayDry } from '../data/diagnosis';
+import { cropCatalog } from '../data/farmer';
+import { diagnoseCropImage } from '../services/groq';
 import { addDays } from '../utils/date';
 import { compressImage } from '../utils/media';
 import { fieldLabel } from '../utils/fields';
@@ -22,7 +25,7 @@ const TIPS = [
 ];
 
 export default function CropDoctor() {
-  const { t, L, activeField, addTask, setCropHealth, toast, dataSaver } = useApp();
+  const { t, L, lang, activeField, addTask, setCropHealth, toast, dataSaver } = useApp();
   const fileRef = useRef(null);
   const camRef = useRef(null);
   const timer = useRef(null);
@@ -30,6 +33,7 @@ export default function CropDoctor() {
   const [phase, setPhase] = useState('idle'); // idle | analyzing | done
   const [report, setReport] = useState(null);
   const [picked, setPicked] = useState({});
+  const [aiState, setAiState] = useState('idle'); // idle | ok | fallback
 
   useEffect(() => () => clearTimeout(timer.current), []);
   // New field selected → start over.
@@ -53,15 +57,29 @@ export default function CropDoctor() {
     }
   };
 
-  const analyze = () => {
+  /** AI diagnosis via Groq vision (qwen/qwen3.8-27b); falls back to the demo report offline. */
+  const analyze = async () => {
     setPhase('analyzing');
-    timer.current = setTimeout(() => {
-      const r = diagnose(activeField?.cropId);
-      setReport(r);
-      setPicked(Object.fromEntries(r.tasks.map((_, i) => [i, true])));
-      setPhase('done');
-      if (activeField) setCropHealth(activeField.id, 'watch');
-    }, 2200);
+    const started = Date.now();
+    let r;
+    try {
+      const cropName = activeField && cropCatalog[activeField.cropId] ? cropCatalog[activeField.cropId].name.en : '';
+      const ai = await diagnoseCropImage(photo, { lang, cropName });
+      const tasks = ai.notPlant ? [recheck(1)] : ai.healthy ? [recheck(7)] : [removeLeaves(2), sprayDry(3), recheck(7)];
+      r = { ...ai, tasks };
+      setAiState('ok');
+    } catch (e) {
+      r = { ...diagnose(activeField?.cropId), source: 'demo' };
+      setAiState('fallback');
+      toast(t(e?.message === 'rate_limited' ? 'dx.ai.busy' : 'dx.ai.fallback'), 'info');
+    }
+    // Keep the scan animation visible briefly so the result doesn't flash in.
+    const wait = 900 - (Date.now() - started);
+    if (wait > 0) await new Promise((res) => (timer.current = setTimeout(res, wait)));
+    setReport(r);
+    setPicked(Object.fromEntries(r.tasks.map((_, i) => [i, true])));
+    setPhase('done');
+    if (activeField && !r.notPlant) setCropHealth(activeField.id, r.healthy ? 'healthy' : 'watch');
   };
 
   const addTasks = () => {
@@ -80,7 +98,7 @@ export default function CropDoctor() {
 
   return (
     <div>
-      <PageHeader title={t('dx.title')} subtitle={t('dx.sub')} demo />
+      <PageHeader title={t('dx.title')} subtitle={t('dx.sub')} demo={aiState === 'fallback'} />
       <FieldTabs className="mb-5" />
 
       <div className="grid lg:grid-cols-[minmax(0,26rem)_1fr] gap-5 items-start">
@@ -150,19 +168,29 @@ export default function CropDoctor() {
 
 function Report({ report, picked, setPicked, onAddTasks }) {
   const { t, L } = useApp();
+  const isAi = report.source === 'ai';
+  const hasRemedies = report.traditional.length + report.organic.length + report.chemical.length > 0;
+  const HeadIcon = report.notPlant ? HelpCircle : report.healthy ? CheckCircle2 : ShieldAlert;
+  const tone = report.notPlant ? 'bg-amber-50 text-amber-700' : report.healthy ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700';
   return (
     <div className="space-y-4">
       <div className="card p-5">
         <div className="flex flex-wrap gap-2 mb-2">
-          <Badge tone="amber"><FlaskConical size={13} /> {t('dx.mock')}</Badge>
+          {isAi ? (
+            <Badge tone="green"><Sparkles size={13} /> {t('dx.ai.badge')}</Badge>
+          ) : (
+            <Badge tone="amber"><FlaskConical size={13} /> {t('dx.mock')}</Badge>
+          )}
+          {isAi && report.cropSeen && !report.notPlant && <Badge tone="gray">{t('dx.ai.cropSeen', { crop: report.cropSeen })}</Badge>}
         </div>
         <div className="flex items-start gap-3">
-          <span className="h-12 w-12 rounded-2xl bg-red-50 text-red-700 grid place-items-center shrink-0"><ShieldAlert size={24} /></span>
-          <div>
-            <h2 className="text-xl font-semibold text-forest-900 leading-tight">{L(report.name)}</h2>
+          <span className={`h-12 w-12 rounded-2xl grid place-items-center shrink-0 ${tone}`}><HeadIcon size={24} /></span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-forest-900 leading-tight">{report.notPlant ? t('dx.ai.unclear') : L(report.name)}</h2>
             <p className="text-forest-700 mt-1">{L(report.symptoms)}</p>
           </div>
         </div>
+        {!report.notPlant && (
         <div className="grid sm:grid-cols-3 gap-3 mt-4">
           <div className="rounded-xl bg-cream-100 p-3">
             <div className="text-xs text-forest-600">{t('crops.severity')}</div>
@@ -177,8 +205,10 @@ function Report({ report, picked, setPicked, onAddTasks }) {
             <div className="font-semibold text-forest-900 mt-0.5">~{report.affected}%</div>
           </div>
         </div>
+        )}
       </div>
 
+      {hasRemedies && (
       <div className="grid md:grid-cols-3 gap-4">
         <RemedyCol n={1} title={t('dx.rem.traditional')} tone="bg-amber-50 border-amber-200">
           <ul className="space-y-2">{report.traditional.map((r, i) => <li key={i} className="flex gap-2 text-sm"><Sprout size={15} className="text-amber-700 shrink-0 mt-0.5" />{L(r)}</li>)}</ul>
@@ -188,9 +218,17 @@ function Report({ report, picked, setPicked, onAddTasks }) {
         </RemedyCol>
         <RemedyCol n={3} title={t('dx.rem.chemical')} tone="bg-sky-50 border-sky-200">
           <Doses items={report.chemical} />
-          <p className="text-xs text-red-800 mt-3 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" /> {t('dx.safety')}</p>
+          {report.chemical.length > 0 && <p className="text-xs text-red-800 mt-3 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" /> {t('dx.safety')}</p>}
         </RemedyCol>
       </div>
+      )}
+
+      {report.prevention?.length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-semibold text-forest-900 flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-600" /> {t('dx.ai.prevention')}</h3>
+          <ul className="mt-2 space-y-1.5">{report.prevention.map((p, i) => <li key={i} className="flex gap-2 text-sm text-forest-800"><Leaf size={15} className="text-emerald-600 shrink-0 mt-0.5" />{p}</li>)}</ul>
+        </div>
+      )}
 
       <div className="card p-5">
         <h3 className="font-semibold text-forest-900 flex items-center gap-2"><CalendarPlus size={18} className="text-emerald-600" /> {t('dx.makeTasks')}</h3>
@@ -228,6 +266,7 @@ function RemedyCol({ n, title, tone, children }) {
 
 function Doses({ items }) {
   const { t, L } = useApp();
+  if (!items.length) return <p className="text-sm text-forest-600">{t('dx.ai.noneNeeded')}</p>;
   return (
     <ul className="space-y-3">
       {items.map((d, i) => (

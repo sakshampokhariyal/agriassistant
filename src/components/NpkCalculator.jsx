@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { FlaskConical, Beaker, Info, Sprout } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SectionTitle } from './ui';
-import { NPK_LIMITS, RDF, rateLevel, fertilizerPlan } from '../data/communityTools';
+import { NPK_LIMITS, RDF, HA_PER_ACRE, rateLevel, fertilizerPlan } from '../data/communityTools';
+import { npkKeyFor } from '../data/cropMasterData';
 
 /** NPK soil-test fertilizer calculator (shown on My Crops). */
 const NUTRIENT_STYLE = {
@@ -11,24 +12,19 @@ const NUTRIENT_STYLE = {
   K: { dot: 'bg-violet-500', input: 'focus:ring-violet-300', badge: { low: 'bg-violet-50 text-violet-700 border-violet-200', medium: 'bg-violet-100 text-violet-800 border-violet-300', high: 'bg-violet-600 text-white border-violet-600' } },
 };
 const fmt = (n, d = 0) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: d, minimumFractionDigits: d });
-
-/** Calculator crop for a My Crops field (ragi splits by irrigation); null when the crop has no dose table. */
-function rdfKeyFor(field) {
-  if (!field?.cropId) return null;
-  if (field.cropId === 'ragi') return field.irrigation === 'rainfed' ? 'ragiRainfed' : 'ragiIrrigated';
-  return RDF[field.cropId] ? field.cropId : null;
-}
+/** Up to one decimal, none for whole numbers (100 → '100', 22.5 → '22.5'). */
+const fmt1 = (n) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: 1 });
 
 export default function NpkCalculator({ field }) {
   const { t, L } = useApp();
   const [soil, setSoil] = useState({ N: '', P: '', K: '' });
-  const [crop, setCrop] = useState(() => rdfKeyFor(field) || 'ragiIrrigated');
+  const [crop, setCrop] = useState(() => npkKeyFor(field) || 'ragiIrrigated');
   const [acres, setAcres] = useState(() => String(field?.acres || 1));
 
   // Follow the field selected on My Crops (the farmer can still change both by hand).
   useEffect(() => {
     if (!field) return;
-    const key = rdfKeyFor(field);
+    const key = npkKeyFor(field);
     if (key) setCrop(key);
     if (field.acres) setAcres(String(field.acres));
   }, [field?.id, field?.cropId, field?.irrigation, field?.acres]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -38,9 +34,11 @@ export default function NpkCalculator({ field }) {
     [soil],
   );
   const area = Math.min(Math.max(Number(acres) || 0, 0), 1000);
-  const ready = levels.N && levels.P && levels.K && area > 0;
-  const plan = ready ? fertilizerPlan(crop, levels, area) : null;
+  // Without soil values the standard dose is used (Medium); each entered value adjusts its nutrient.
+  const soilEntered = Boolean(levels.N || levels.P || levels.K);
+  const plan = area > 0 ? fertilizerPlan(crop, levels, area) : null;
   const rdf = RDF[crop];
+  const perField = (kgHa) => kgHa * HA_PER_ACRE * area;
 
   const setVal = (k) => (e) => {
     const v = e.target.value;
@@ -109,9 +107,17 @@ export default function NpkCalculator({ field }) {
         {/* Results */}
         <div className="min-w-0 rounded-3xl bg-forest-700 text-cream-50 p-4 md:p-5 flex flex-col">
           <h3 className="font-extrabold text-lg flex items-center gap-2"><Sprout size={20} className="text-earth-400" aria-hidden /> {t('cm.npk.result')}</h3>
-          <p className="text-xs text-cream-200 mt-1">
-            {t('cm.npk.rdf', { n: rdf.N, p: rdf.P, k: rdf.K })}
-          </p>
+          <div className="mt-2 rounded-2xl bg-white/10 p-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-earth-400">{t('cm.npk.base')} · {L(rdf.name)}</p>
+            <p className="mt-1">{t('cm.npk.baseHa', { n: fmt1(rdf.N), p: fmt1(rdf.P), k: fmt1(rdf.K) })}</p>
+            {area > 0 && (
+              <p className="font-semibold">
+                {t('cm.npk.baseField', { a: fmt(area, area % 1 ? 1 : 0), n: fmt1(perField(rdf.N)), p: fmt1(perField(rdf.P)), k: fmt1(perField(rdf.K)) })}
+              </p>
+            )}
+            {rdf.fymT && area > 0 && <p className="text-xs text-cream-200 mt-1">{t('cm.npk.fym', { t: rdf.fymT, ta: fmt1(perField(rdf.fymT)) })}</p>}
+          </div>
+          <p className="text-xs text-cream-200 mt-2">{soilEntered ? t('cm.npk.adjusted') : t('cm.npk.addSoil')}</p>
           {plan ? (
             <>
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -129,7 +135,6 @@ export default function NpkCalculator({ field }) {
               </p>
               <ul className="mt-3 space-y-1.5 text-sm text-cream-100">
                 <li className="flex gap-2"><Info size={16} className="shrink-0 mt-0.5 text-earth-400" aria-hidden />{t('cm.npk.tipSplit')}</li>
-                <li className="flex gap-2"><Info size={16} className="shrink-0 mt-0.5 text-earth-400" aria-hidden />{t('cm.npk.tipFym')}</li>
               </ul>
             </>
           ) : (

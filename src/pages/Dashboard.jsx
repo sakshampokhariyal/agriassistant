@@ -12,6 +12,8 @@ import { useChat } from '../context/ChatContext';
 import TodayAction from '../components/TodayAction';
 import { conditionFromCode } from '../services/weather';
 import { alertText, fmt } from '../utils/weatherText';
+import { placeText, useFarmLocation } from '../context/LocationContext';
+import { savedPlaceNear } from '../services/location';
 
 const ADVICE_CHIP = {
   red: 'bg-red-500 text-white',
@@ -69,6 +71,9 @@ export default function Dashboard() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const wx = useWeather();
+  const farmLocation = useFarmLocation();
+  const near = wx.source === 'gps' ? savedPlaceNear(wx.coords) : null;
+  const wxPlace = near ? near.city || near.label : '';
   const wd = wx.data;
   const topAlert = wx.alerts[0] ? alertText(wx.alerts[0], t, lang) : null;
   const today = todayISO();
@@ -107,7 +112,7 @@ export default function Dashboard() {
           <p className="mt-5 text-white/80 flex flex-wrap items-center gap-x-2">
             <span>{t(greetingKey())}{profile.name?.trim() ? `, ${profile.name.trim().split(' ')[0]}` : ''}</span>
             <span className="text-white/40">·</span>
-            <span className="inline-flex items-center gap-1"><MapPin size={15} aria-hidden /> {profile.village}, {profile.district}</span>
+            <span className="inline-flex items-center gap-1"><MapPin size={15} aria-hidden /> {placeText(profile, farmLocation)}</span>
             <span className="hidden sm:inline text-white/40">·</span>
             <span className="hidden sm:inline">{fmtLong(lang)}</span>
           </p>
@@ -146,7 +151,7 @@ export default function Dashboard() {
             {/* Weather glass card */}
             <Link to="/weather" className="glass-card block hover:bg-emerald-950/70 transition">
               <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-white/70">
-                <span className="truncate">{wx.source === 'gps' ? t('dash.weatherNow') : `${t('wx.locDefault').split(' (')[0]} · ${t('dash.weatherNow')}`}</span>
+                <span className="truncate">{wx.source === 'gps' ? (wxPlace ? `${wxPlace} · ${t('dash.weatherNow')}` : t('dash.weatherNow')) : `${t('wx.locDefault').split(' (')[0]} · ${t('dash.weatherNow')}`}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case tracking-normal shrink-0">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" /> {t('wx.live')}
                 </span>
