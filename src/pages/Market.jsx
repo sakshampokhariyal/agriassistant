@@ -73,7 +73,10 @@ function PriceSummary({ cropId, live }) {
       <div className="flex items-start gap-4">
         <span className="h-12 w-12 rounded-2xl bg-white/15 grid place-items-center shrink-0"><Icon size={24} className="text-earth-400" /></span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-extrabold">{t('mk.sum.title', { crop: L(c.name) })}</h2>
+          <h2 className="text-xl font-extrabold">
+            {t('mk.sum.title', { crop: L(c.name) })}
+            {live.source === 'sample' && <span className="ml-2 align-middle inline-block rounded-full bg-earth-400 text-forest-900 text-xs font-bold px-2.5 py-0.5">{t('mk.sample.tag')}</span>}
+          </h2>
           <p className="mt-1 text-cream-100">
             {t(`mk.sum.${advice}`, {
               msp: c.msp ? fmtNum(c.msp, lang) : '',
@@ -91,7 +94,7 @@ function PriceSummary({ cropId, live }) {
         <Stat label={t('mk.sum.low')} value={`₹${fmtNum(low.modal, lang)}`} sub={low.market} />
         <Stat label={c.msp ? `${t('market.msp')} ${c.mspSeason}` : t('market.msp')} value={c.msp ? `₹${fmtNum(c.msp, lang)}` : t('mk.noMsp')} />
       </dl>
-      <p className="text-xs text-cream-200 mt-3">{t('mk.sum.basis', { n: rows.length })} · {t('market.perQ')}</p>
+      <p className="text-xs text-cream-200 mt-3">{live.source === 'sample' ? t('mk.sample.basis', { n: rows.length }) : t('mk.sum.basis', { n: rows.length })} · {t('market.perQ')}</p>
     </section>
   );
 }

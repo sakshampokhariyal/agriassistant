@@ -31,6 +31,7 @@ export function adviseCrop(cropId, live, month) {
   // Price: live rows for this crop, else the last saved Agmarknet load.
   let rows = live?.cropId === cropId ? live.rows || [] : [];
   let savedAt = live?.cropId === cropId && live.source === 'cache' ? live.fetchedAt : null;
+  const sample = live?.cropId === cropId && live.source === 'sample';
   if (!rows.length) {
     const cached = cachedPrices(cropId);
     if (cached?.rows?.length) {
@@ -60,6 +61,7 @@ export function adviseCrop(cropId, live, month) {
     price,
     n: rows.length,
     savedAt,
+    sample,
     msp: c.msp,
     season: s,
     observed: observedTrend(cropId),
@@ -100,6 +102,7 @@ export default function MarketAdvisor({ cropId, live }) {
           <p>
             {t('adv.price', { crop, price: fmtNum(a.price, lang), n: a.n })}
             {a.savedAt ? ` ${t('adv.savedOn', { date: fmtDate(toISO(new Date(a.savedAt)), lang) })}` : ''}
+            {a.sample ? ` ${t('adv.sampleNote')}` : ''}
           </p>
         ) : (
           <p className="text-forest-600">{t('adv.noPrice')}</p>

@@ -1,6 +1,12 @@
 /** Strings for the Hold vs Sell market advisor (Market tab). */
 export default {
   en: {
+    'mk.sample.badge': 'Sample prices · live Agmarknet feed unavailable',
+    'mk.sample.tag': 'Sample prices',
+    'mk.sample.note': 'Realistic sample prices for demonstration – not today’s official Agmarknet rates. Live prices replace them automatically when the feed is reachable.',
+    'mk.sample.basis': 'Sample of {n} Karnataka mandis, not official rates',
+    'mk.calc.samplePrice': 'Sample price for demonstration – enter the price you were offered.',
+    'adv.sampleNote': '(Sample price – not today’s official rate.)',
     'adv.title': 'Hold or sell?',
     'adv.sub': 'Advice for {crop} from the yearly market cycle, today’s mandi price and the MSP.',
     'adv.sig.sell': 'Sell now',
@@ -34,6 +40,12 @@ export default {
     'adv.note': 'Based on the usual yearly cycle – weather, imports and procurement can change it. Check your local mandi before deciding.',
   },
   hi: {
+    'mk.sample.badge': 'नमूना भाव · लाइव Agmarknet फ़ीड उपलब्ध नहीं',
+    'mk.sample.tag': 'नमूना भाव',
+    'mk.sample.note': 'प्रदर्शन के लिए यथार्थवादी नमूना भाव – आज के आधिकारिक Agmarknet भाव नहीं। फ़ीड उपलब्ध होते ही लाइव भाव अपने आप दिखेंगे।',
+    'mk.sample.basis': '{n} कर्नाटक मंडियों का नमूना, आधिकारिक भाव नहीं',
+    'mk.calc.samplePrice': 'प्रदर्शन के लिए नमूना भाव – आपको मिला भाव दर्ज करें।',
+    'adv.sampleNote': '(नमूना भाव – आज का आधिकारिक भाव नहीं।)',
     'adv.title': 'रोकें या बेचें?',
     'adv.sub': '{crop} के लिए सलाह – सालाना बाज़ार चक्र, आज के मंडी भाव और MSP के आधार पर।',
     'adv.sig.sell': 'अभी बेचें',
@@ -67,6 +79,12 @@ export default {
     'adv.note': 'सामान्य सालाना चक्र पर आधारित – मौसम, आयात और सरकारी खरीद इसे बदल सकते हैं। फ़ैसले से पहले स्थानीय मंडी से पता करें।',
   },
   kn: {
+    'mk.sample.badge': 'ಮಾದರಿ ದರ · ನೇರ Agmarknet ಫೀಡ್ ಲಭ್ಯವಿಲ್ಲ',
+    'mk.sample.tag': 'ಮಾದರಿ ದರ',
+    'mk.sample.note': 'ಪ್ರದರ್ಶನಕ್ಕಾಗಿ ವಾಸ್ತವಿಕ ಮಾದರಿ ದರ – ಇಂದಿನ ಅಧಿಕೃತ Agmarknet ದರ ಅಲ್ಲ. ಫೀಡ್ ಲಭ್ಯವಾದಾಗ ನೇರ ದರ ತಾನಾಗಿ ಬರುತ್ತದೆ.',
+    'mk.sample.basis': '{n} ಕರ್ನಾಟಕ ಮಂಡಿಗಳ ಮಾದರಿ, ಅಧಿಕೃತ ದರ ಅಲ್ಲ',
+    'mk.calc.samplePrice': 'ಪ್ರದರ್ಶನಕ್ಕಾಗಿ ಮಾದರಿ ದರ – ನಿಮಗೆ ಸಿಕ್ಕ ದರ ನಮೂದಿಸಿ.',
+    'adv.sampleNote': '(ಮಾದರಿ ದರ – ಇಂದಿನ ಅಧಿಕೃತ ದರ ಅಲ್ಲ.)',
     'adv.title': 'ಇಟ್ಟುಕೊಳ್ಳಬೇಕೇ ಅಥವಾ ಮಾರಬೇಕೇ?',
     'adv.sub': 'ಬೆಳೆ: {crop} – ವಾರ್ಷಿಕ ಮಾರುಕಟ್ಟೆ ಚಕ್ರ, ಇಂದಿನ ಮಂಡಿ ದರ ಮತ್ತು MSP ಆಧಾರದ ಸಲಹೆ.',
     'adv.sig.sell': 'ಈಗ ಮಾರಿ',

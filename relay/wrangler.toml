@@ -1,0 +1,7 @@
+# Cloudflare Worker that relays data.gov.in mandi-price requests for the live site.
+# Deploy from this folder:  npx wrangler deploy
+# Then set DATAGOV_RELAY_URL on Vercel to the URL it prints (https://agrisahaya-datagov-relay.<you>.workers.dev).
+name = "agrisahaya-datagov-relay"
+main = "datagov-worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true

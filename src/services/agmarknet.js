@@ -3,11 +3,13 @@
  * Official source: data.gov.in (resource 9ef84268-d588-465a-a308-a864a43d0070).
  * Called through the /proxy/datagov dev proxy, which adds the API key server-side.
  *
- * Returns { source: 'live' | 'cache' | 'none', rows, scope, fetchedAt, error }.
- * There is no simulated fallback: without live or cached data, rows is empty.
+ * Returns { source: 'live' | 'cache' | 'sample' | 'none', rows, scope, fetchedAt, error }.
+ * Order: live → last saved prices → clearly labelled sample prices (data/samplePrices.js) → none.
+ * Sample prices are never cached, so they can never be mistaken for live data later.
  * Rows: { id, market, district, state, variety, date, min, max, modal }  (₹ / quintal)
  */
 import { marketCrops, matchesCrop } from '../data/markets';
+import { samplePrices } from '../data/samplePrices';
 
 export const AGMARKNET_RESOURCE = '9ef84268-d588-465a-a308-a864a43d0070';
 export const AGMARKNET_PAGE = 'https://www.data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi';
@@ -109,6 +111,8 @@ export async function fetchMandiPrices(cropId, { preferCache = false, timeoutMs 
     return { source: 'live', rows, scope, fetchedAt: at, error: null };
   } catch (e) {
     if (cached?.rows?.length) return { source: 'cache', rows: cached.rows, scope: cached.scope, fetchedAt: cached.at, error: e.message };
+    const sample = samplePrices(cropId);
+    if (sample) return { source: 'sample', rows: sample.rows, scope: sample.scope, fetchedAt: null, error: e.message };
     return { source: 'none', rows: [], scope: null, fetchedAt: null, error: e.message };
   }
 }

@@ -57,7 +57,7 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
           ) : (
             <input className="input" disabled value={t('mk.calc.noLive')} />
           )}
-          <span className={`mt-1 block text-xs ${isLive ? 'text-emerald-700' : 'text-earth-700'}`}>{isLive ? t('mk.calc.livePrice') : t('mk.calc.typePrice')}</span>
+          <span className={`mt-1 block text-xs ${isLive ? 'text-emerald-700' : 'text-earth-700'}`}>{isLive ? (live.source === 'sample' ? t('mk.calc.samplePrice') : t('mk.calc.livePrice')) : t('mk.calc.typePrice')}</span>
         </Field>
         <Field label={t('mk.qty')}>
           <div className="flex gap-2">

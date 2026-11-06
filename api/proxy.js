@@ -21,7 +21,9 @@ const SERVICES = {
   datagov: {
     key: () => env('DATA_GOV_API_KEY', 'VITE_DATA_GOV_API_KEY'),
     keyName: 'DATA_GOV_API_KEY',
-    url: (sub, qs, key) => `https://api.data.gov.in/${sub}?${qs ? `${qs}&` : ''}api-key=${encodeURIComponent(key)}`,
+    // data.gov.in refuses Vercel's servers (ECONNREFUSED), so when DATAGOV_RELAY_URL is set the
+    // request goes through the Cloudflare relay in relay/ instead (same path and query).
+    url: (sub, qs, key) => `${(env('DATAGOV_RELAY_URL') || 'https://api.data.gov.in').replace(/\/+$/, '')}/${sub}?${qs ? `${qs}&` : ''}api-key=${encodeURIComponent(key)}`,
   },
   newsdata: {
     key: () => env('NEWSDATA_API_KEY', 'VITE_NEWSDATA_API_KEY'),

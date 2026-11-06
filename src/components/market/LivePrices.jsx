@@ -52,8 +52,12 @@ export default function LivePrices({ cropId, onRows }) {
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 font-semibold">
                 <CloudOff size={13} /> {t('mk.live.cached', { time: time(r.fetchedAt) })}
               </span>
+            ) : r?.source === 'sample' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2.5 py-1 font-semibold">
+                <CloudOff size={13} /> {t('mk.sample.badge')}
+              </span>
             ) : null}
-            {r?.error && r.source !== 'live' && <span className="text-forest-600">{t(`mk.err.${errKey(r.error)}`)}</span>}
+            {r?.error && r.source !== 'live' && r.source !== 'sample' && <span className="text-forest-600">{t(`mk.err.${errKey(r.error)}`)}</span>}
           </div>
         </div>
         <button className="btn-ghost !min-h-[40px] text-sm" onClick={() => load(true)} disabled={state.loading}>
@@ -104,7 +108,7 @@ export default function LivePrices({ cropId, onRows }) {
             })}
           </ul>
           <p className="text-xs text-forest-600/80 mt-3 flex flex-wrap items-center gap-x-2">
-            <span>{t('mk.live.note')}</span>
+            <span>{r.source === 'sample' ? t('mk.sample.note') : t('mk.live.note')}</span>
             {msp && <span>{t('market.msp')} {marketCrops[cropId].mspSeason}: ₹{fmtNum(msp, lang)}</span>}
             <a href={AGMARKNET_PAGE} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-700 underline">
               data.gov.in <ExternalLink size={12} />
