@@ -8,7 +8,6 @@ import features from './features';
 import liveFeeds from './liveFeeds';
 import authEmail from './authEmail';
 import community from './community';
-import phoneAuth from './phoneAuth';
 import schedule from './schedule';
 import news from './news';
 import cropMaster from './cropMaster';
@@ -27,7 +26,7 @@ export const LANGUAGES = [
 ];
 
 /** Feature modules keep their own string tables; they are merged into one dictionary per language. */
-const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location, nearby, kb, cleanup, advisor];
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, schedule, news, cropMaster, vision, location, nearby, kb, cleanup, advisor];
 export const dictionaries = Object.fromEntries(
   Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
 );

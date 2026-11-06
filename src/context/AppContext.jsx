@@ -6,6 +6,7 @@ import { initialTasks, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
 import { pastTaskIds } from '../utils/cropSchedule';
 import * as authService from '../services/auth';
 import useNow from '../hooks/useNow';
+import useCloudSync from '../hooks/useCloudSync';
 import { toISO } from '../utils/date';
 
 const AppContext = createContext(null);
@@ -106,7 +107,8 @@ export function AppProvider({ children }) {
 
   const addCrop = useCallback(
     (crop) => {
-      const id = `c${Date.now()}`;
+      // Unique across devices too: field ids are also the cloud row ids.
+      const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
       setCrops((x) => {
         const no = Math.max(0, ...x.map((c) => c.no || 0)) + 1;
         return [...x, { id, no, name: '', soil: profile.soil, irrigation: profile.irrigation, health: 'healthy', ...crop }];
@@ -221,6 +223,9 @@ export function AppProvider({ children }) {
   const now = useNow(30000);
   const today = toISO(new Date(now));
 
+  // Mirror fields, calendar ticks and profile to Supabase for a signed-in Supabase user.
+  const cloudStatus = useCloudSync({ auth, crops, setCrops, scheduleDone, setScheduleDone, profile, setProfile });
+
   /** Name to show in the UI: the farmer's own name, or a generic placeholder. */
   const displayName = profile.name?.trim() || translate(lang, 'common.farmer');
 
@@ -254,8 +259,9 @@ export function AppProvider({ children }) {
       loginOpen, setLoginOpen,
       resetDemo,
       today,
+      cloudStatus,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone,  auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone,  auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today, cloudStatus]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -21,7 +21,7 @@ function storageKB() {
 }
 
 export default function Settings() {
-  const { t, lang, dataSaver, setDataSaver, crops, tasks, toast } = useApp();
+  const { t, lang, dataSaver, setDataSaver, crops, tasks, toast, cloudStatus } = useApp();
   const weather = useWeather();
   const online = useOnline();
   const kb = useMemo(storageKB, [crops, tasks, weather.updatedAt, dataSaver]);
@@ -84,6 +84,13 @@ export default function Settings() {
             <div>
               <div className="font-semibold text-forest-900">{t('set.cachedWeather')}</div>
               <div className="text-xs text-forest-600">{weather.updatedAt ? time(weather.updatedAt) : '—'}{weather.fromCache ? ` · ${t('set.fromCache')}` : ''}</div>
+            </div>
+          </div>
+          <div className="rounded-xl p-3 bg-cream-100 flex items-center gap-3 sm:col-span-2">
+            <Database className={cloudStatus === 'synced' ? 'text-forest-600' : cloudStatus === 'off' ? 'text-forest-400' : 'text-earth-600'} />
+            <div>
+              <div className="font-semibold text-forest-900">{t('set.cloud')}: {t(`set.cloud.${cloudStatus}`)}</div>
+              <div className="text-xs text-forest-600">{t(`set.cloud.${cloudStatus}Sub`)}</div>
             </div>
           </div>
         </div>
