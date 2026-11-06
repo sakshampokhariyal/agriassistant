@@ -53,6 +53,14 @@ alter table public.profiles        enable row level security;
 alter table public.user_crops      enable row level security;
 alter table public.completed_tasks enable row level security;
 
+-- Belt and braces: signed-out visitors (the public `anon` role used by the browser key)
+-- get no table access at all; signed-in users get access, then limited to their own rows by RLS.
+revoke all on public.profiles, public.user_crops, public.completed_tasks from anon;
+grant select, insert, update, delete on public.profiles, public.user_crops, public.completed_tasks to authenticated;
+
+-- Every policy below is `to authenticated` and checks auth.uid() against the row owner:
+--   profiles.id (the profile row's id IS the user's id) · user_crops.user_id · completed_tasks.user_id
+
 -- profiles: a user sees and edits only their own profile
 drop policy if exists "profiles: own select" on public.profiles;
 drop policy if exists "profiles: own insert" on public.profiles;

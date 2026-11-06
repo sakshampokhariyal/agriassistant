@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { translate, loc } from '../translations';
 import { defaultProfile, initialCrops } from '../data/farmer';
@@ -13,6 +13,48 @@ const AppContext = createContext(null);
 const SIGNED_OUT = { loggedIn: false, email: '', phone: '', userId: null };
 const VERSION = 'v1';
 
+/**
+ * Everything on this device that belongs to one farmer. Cleared on logout and when a different
+ * account signs in, so the next person (or a guest) never sees someone else's farm.
+ * Device settings (language, Data Saver) and public caches (weather, mandi prices) are kept.
+ */
+const USER_DATA_KEYS = [
+  `ks-profile-${VERSION}`,
+  `ks-crops-${VERSION}`,
+  `ks-tasks-${VERSION}`,
+  'ks-schedule-done-v1',
+  'ks-active-field-v1',
+  'ks-field-notes-v1',
+  'ks-expenses-v1',
+  'ks-chat-v1',
+  'ks-today-action-v1',
+  'ks-claims-v1',
+  'ks-claim-draft-v1',
+  'ks-backup-before-cleanup',
+  // Names used in earlier specs – removed too in case anything wrote them.
+  'agrisahaya_user_profile',
+  'agrisahaya_user_crops',
+  'agrisahaya_completed_tasks',
+];
+/** Which account the farm data on this device belongs to (null = guest). */
+const OWNER_KEY = 'ks-data-owner-v1';
+const readOwner = () => {
+  try {
+    return localStorage.getItem(OWNER_KEY);
+  } catch {
+    return null;
+  }
+};
+const writeOwner = (id) => {
+  try {
+    if (id) localStorage.setItem(OWNER_KEY, id);
+    else localStorage.removeItem(OWNER_KEY);
+  } catch {
+    /* ignore */
+  }
+};
+const toAuth = (u) => (u ? { loggedIn: true, email: u.email || '', phone: '', userId: u.id, local: false } : SIGNED_OUT);
+
 export function AppProvider({ children }) {
   const [profile, setProfile] = useLocalStorage(`ks-profile-${VERSION}`, defaultProfile);
   const [crops, setCrops] = useLocalStorage(`ks-crops-${VERSION}`, initialCrops);
@@ -23,6 +65,8 @@ export function AppProvider({ children }) {
   const [activeFieldId, setActiveFieldId] = useLocalStorage('ks-active-field-v1', null);
   const [dataSaver, setDataSaver] = useLocalStorage('ks-data-saver-v1', false);
   const [toasts, setToasts] = useState([]);
+  // Bumped when farmer data is wiped: the page tree remounts so no component keeps old state.
+  const [dataEpoch, setDataEpoch] = useState(0);
   const [loginOpen, setLoginOpen] = useState(false);
 
   // Fields migration: older crop entries get a field number, soil and irrigation source.
@@ -195,28 +239,66 @@ export function AppProvider({ children }) {
 
 
   /** Called after a successful sign-in ({ id, email }). Supabase keeps the session itself. */
-  const login = useCallback((user) => setAuth(user ? { loggedIn: true, email: user.email || '', phone: user.phone || '', userId: user.id, local: !!user.local } : SIGNED_OUT), []);
+  /** Wipe one farmer's data from storage and memory; guest views start blank. */
+  const clearUserData = useCallback(() => {
+    setProfile({ ...defaultProfile, language: lang });
+    setCrops([]);
+    setScheduleDone({});
+    setTasks([]);
+    setActiveFieldId(null);
+    try {
+      USER_DATA_KEYS.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* ignore */
+    }
+    writeOwner(null);
+    setDataEpoch((n) => n + 1);
+  }, [lang, setProfile, setCrops, setScheduleDone, setTasks, setActiveFieldId]);
+
+  /**
+   * Apply a sign-in state. A different account than the one whose data is on this device
+   * starts from a blank device (its own data then loads from the cloud). Guest data has no
+   * owner and is kept, so a farmer who starts as a guest can save it to their new account.
+   */
+  const userIdRef = useRef(null);
+  const applyUser = useCallback(
+    (u) => {
+      const prev = userIdRef.current;
+      if (u) {
+        const owner = readOwner();
+        if (owner && owner !== u.id) clearUserData();
+        writeOwner(u.id);
+        userIdRef.current = u.id;
+      } else {
+        userIdRef.current = null;
+        // Signed out somewhere else (another tab, expired session): wipe like a logout.
+        if (prev) clearUserData();
+      }
+      setAuth(toAuth(u));
+    },
+    [clearUserData]
+  );
+
+  const login = useCallback((user) => applyUser(user || null), [applyUser]);
   const logout = useCallback(async () => {
     await authService.signOut();
+    userIdRef.current = null;
     setAuth(SIGNED_OUT);
-  }, []);
+    clearUserData();
+  }, [clearUserData]);
 
   // Restore the Supabase session on load and follow sign-in / sign-out events
   // (including returning from an email confirmation or password-reset link).
   useEffect(() => {
     let alive = true;
-    authService.getUser().then((u) => alive && setAuth(u ? { loggedIn: true, email: u.email || '', phone: u.phone || '', userId: u.id, local: !!u.local } : SIGNED_OUT));
-    const unsubscribe = authService.onAuthChange((u) => setAuth(u ? { loggedIn: true, email: u.email || '', phone: u.phone || '', userId: u.id, local: !!u.local } : SIGNED_OUT));
-    try {
-      localStorage.removeItem('ks-auth-v1'); // old mock phone login
-    } catch {
-      /* ignore */
-    }
+    authService.removeLegacyLocalAccounts();
+    authService.getUser().then((u) => alive && applyUser(u));
+    const unsubscribe = authService.onAuthChange((u) => alive && applyUser(u));
     return () => {
       alive = false;
       unsubscribe();
     };
-  }, []);
+  }, [applyUser]);
 
   // Calendar date that rolls over at midnight (checked every 30 s and whenever the tab is shown),
   // so every date-based view – crop stages, today's tasks, weather days – moves to the new day.
@@ -231,19 +313,9 @@ export function AppProvider({ children }) {
 
   /** Clear every field, task and setting on this device (start over as a new farmer). */
   const resetDemo = useCallback(() => {
-    setProfile(defaultProfile);
-    setCrops(initialCrops());
-    setScheduleDone({});
-    setTasks(initialTasks());
-    setLangState(defaultProfile.language);
-    try {
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith('ks-chat') || k.startsWith('ks-claim'))
-        .forEach((k) => localStorage.removeItem(k));
-    } catch {
-      /* ignore */
-    }
-  }, [setProfile, setCrops, setScheduleDone, setTasks, setAuth]);
+    clearUserData();
+    if (userIdRef.current) writeOwner(userIdRef.current);
+  }, [clearUserData]);
 
   const value = useMemo(
     () => ({
@@ -260,8 +332,9 @@ export function AppProvider({ children }) {
       resetDemo,
       today,
       cloudStatus,
+      dataEpoch,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone,  auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today, cloudStatus]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone,  auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today, cloudStatus, dataEpoch]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

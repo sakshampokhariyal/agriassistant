@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
+import { useApp } from './context/AppContext';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
 import Crops from './pages/Crops';
@@ -16,8 +17,10 @@ import NearbyServices from './pages/NearbyServices';
 import Settings from './pages/Settings';
 
 export default function App() {
+  // A new key after logout / account switch remounts every page, so no screen keeps old farm data.
+  const { dataEpoch } = useApp();
   return (
-    <Routes>
+    <Routes key={dataEpoch}>
       <Route element={<AppLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="assistant" element={<Assistant />} />
