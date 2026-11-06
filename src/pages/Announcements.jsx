@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fmtStamp } from '../utils/date';
 import { AlertTriangle, CloudOff, ExternalLink, Info, Newspaper, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { NEWSDATA_URL, fetchAgriNews } from '../services/news';
@@ -42,7 +43,7 @@ function NewsFeed() {
 
   const { loading, result, error } = state;
   const locale = lang === 'en' ? 'en-IN' : `${lang}-IN`;
-  const time = (ms) => new Date(ms).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  const time = (ms) => fmtStamp(ms, lang);
   const ago = (ms) => {
     const mins = Math.round((ms - Date.now()) / 60000);
     const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
@@ -64,7 +65,7 @@ function NewsFeed() {
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-forest-800 text-white p-4 mb-4">
-        <span className="h-10 w-10 rounded-xl bg-white/15 grid place-items-center shrink-0"><Newspaper size={20} className="text-yellow-300" /></span>
+        <span className="h-10 w-10 rounded-xl bg-white/15 grid place-items-center shrink-0"><Newspaper size={20} className="text-brand-gold-light" /></span>
         <div className="flex-1 min-w-[14rem] text-sm">
           <div className="font-semibold">{t('news.source')}</div>
           <div className="text-white/75">
@@ -111,7 +112,7 @@ function NewsFeed() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-forest-600">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 text-sky-500 px-2.5 py-1 font-semibold">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-navy-100 text-navy-500 px-2.5 py-1 font-semibold">
                     <Newspaper size={13} /> {it.source}
                   </span>
                   {it.pubDate && <span title={time(it.pubDate)}>{ago(it.pubDate)}</span>}

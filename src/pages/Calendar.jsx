@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Circle, Megaphone, Plus, Trash2, X, CalendarX } from 'lucide-react';
+import { CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Circle, Plus, Trash2, X, CalendarX } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { categoryStyle, taskCategories } from '../data/tasks';
 import { cropCatalog } from '../data/farmer';
-import { addDays, fmtDate, parseISO, toISO, todayISO } from '../utils/date';
+import { fmtDate, parseISO, toISO, todayISO } from '../utils/date';
 import { localeOf } from '../translations';
 import { Badge, EmptyState, Field, PageHeader, SectionTitle } from '../components/ui';
 import Modal from '../components/Modal';

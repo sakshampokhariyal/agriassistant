@@ -8,7 +8,7 @@ const HELP_TONE = {
   emerald: { icon: Headset, ring: 'bg-forest-700 text-cream-50', chip: 'bg-white/15 text-earth-400', btn: 'bg-cream-50 text-forest-800 hover:bg-white', sub: 'text-cream-200' },
   amber: { icon: ShieldCheck, ring: 'bg-white border border-earth-100', chip: 'bg-earth-100 text-earth-700', btn: 'bg-earth-500 text-white hover:bg-earth-600', sub: 'text-forest-700/70' },
   red: { icon: Siren, ring: 'bg-white border border-red-100', chip: 'bg-red-50 text-red-600', btn: 'bg-red-600 text-white hover:bg-red-700', sub: 'text-forest-700/70' },
-  violet: { icon: Stethoscope, ring: 'bg-white border border-violet-100', chip: 'bg-violet-50 text-violet-700', btn: 'bg-violet-600 text-white hover:bg-violet-700', sub: 'text-forest-700/70' },
+  violet: { icon: Stethoscope, ring: 'bg-white border border-navy-100', chip: 'bg-navy-50 text-navy-700', btn: 'bg-navy-600 text-white hover:bg-navy-700', sub: 'text-forest-700/70' },
 };
 
 function HelplineHub() {

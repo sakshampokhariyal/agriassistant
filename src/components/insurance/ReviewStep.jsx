@@ -125,7 +125,7 @@ export default function ReviewStep({ draft, setDraft, onSave, goTo }) {
 
       {/* Official channel */}
       <section className="rounded-3xl bg-forest-800 text-white p-5 md:p-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2"><ShieldAlert size={20} className="text-yellow-300" /> {t('ins.off.title')}</h3>
+        <h3 className="text-lg font-semibold flex items-center gap-2"><ShieldAlert size={20} className="text-brand-gold-light" /> {t('ins.off.title')}</h3>
         <p className="text-white/85 mt-1">{t('ins.off.cannot')}</p>
         <div className="flex flex-wrap gap-3 mt-4">
           <a href={LINKS.helplineTel} className="btn bg-white text-forest-900 hover:bg-cream-100"><Phone size={18} /> {t('ins.off.call')}</a>
@@ -138,7 +138,7 @@ export default function ReviewStep({ draft, setDraft, onSave, goTo }) {
         <ol className="space-y-2">
           {GUIDE.map((n) => (
             <li key={n} className="flex gap-3">
-              <span className="h-7 w-7 rounded-full bg-yellow-400 text-emerald-950 text-sm font-semibold grid place-items-center shrink-0">{n}</span>
+              <span className="h-7 w-7 rounded-full bg-brand-gold text-emerald-950 text-sm font-semibold grid place-items-center shrink-0">{n}</span>
               <span className="text-white/90 pt-0.5">{t(`ins.g.${n}`)}</span>
             </li>
           ))}

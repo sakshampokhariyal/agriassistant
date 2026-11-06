@@ -20,7 +20,20 @@ export default {
         cream: { 50: '#fbfbf9', 100: '#f4f4f1', 200: '#ebebe6', 300: '#e2e2db' },
         earth: { 100: '#f6e7d0', 400: '#d9a24f', 500: '#c98a2b', 600: '#a96d1b', 700: '#8a4f2a' },
         clay: { 100: '#fbe3da', 500: '#c4573a', 600: '#a8452c' },
-        sky: { 100: '#dff0f5', 500: '#3d8fa8' },
+        // Navy scale built from the logo navy (#1b2a5e) – used for water / information accents.
+        navy: {
+          50: '#eef1f8',
+          100: '#dde3f1',
+          200: '#bcc6e2',
+          300: '#94a3cf',
+          400: '#6377b3',
+          500: '#3e5296',
+          600: '#2c3f7d',
+          700: '#1b2a5e',
+          800: '#16234f',
+          900: '#121c40',
+          950: '#0b1229',
+        },
         // Official AgriSahaya logo palette (sampled from public/logo.png); also exposed as CSS vars in index.css.
         brand: {
           green: '#1b7a32', // "AGRI" wordmark

@@ -1,10 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { translate, loc } from '../translations';
-import { demoProfile, initialCrops } from '../data/farmer';
+import { defaultProfile, initialCrops } from '../data/farmer';
 import { initialTasks, LEGACY_DEMO_TASK_IDS } from '../data/tasks';
 import { pastTaskIds } from '../utils/cropSchedule';
-import { initialDiscussions } from '../data/community';
 import * as authService from '../services/auth';
 import useNow from '../hooks/useNow';
 import { toISO } from '../utils/date';
@@ -14,14 +13,12 @@ const SIGNED_OUT = { loggedIn: false, email: '', phone: '', userId: null };
 const VERSION = 'v1';
 
 export function AppProvider({ children }) {
-  const [profile, setProfile] = useLocalStorage(`ks-profile-${VERSION}`, demoProfile);
+  const [profile, setProfile] = useLocalStorage(`ks-profile-${VERSION}`, defaultProfile);
   const [crops, setCrops] = useLocalStorage(`ks-crops-${VERSION}`, initialCrops);
   const [tasks, setTasks] = useLocalStorage(`ks-tasks-${VERSION}`, initialTasks);
-  // v2: community posts use generic author labels (no personal names).
-  const [discussions, setDiscussions] = useLocalStorage('ks-disc-v2', initialDiscussions);
   // Auth state mirrors the Supabase session (see services/auth.js).
   const [auth, setAuth] = useState(SIGNED_OUT);
-  const [lang, setLangState] = useLocalStorage(`ks-lang-${VERSION}`, demoProfile.language);
+  const [lang, setLangState] = useLocalStorage(`ks-lang-${VERSION}`, defaultProfile.language);
   const [activeFieldId, setActiveFieldId] = useLocalStorage('ks-active-field-v1', null);
   const [dataSaver, setDataSaver] = useLocalStorage('ks-data-saver-v1', false);
   const [toasts, setToasts] = useState([]);
@@ -29,8 +26,8 @@ export function AppProvider({ children }) {
 
   // Fields migration: older crop entries get a field number, soil and irrigation source.
   useEffect(() => {
-    if (crops.some((c) => !c.no || !c.soil || !c.irrigation)) {
-      setCrops((x) => x.map((c, i) => ({ no: i + 1, name: '', soil: profile.soil, irrigation: profile.irrigation, ...c, ...(c.no ? {} : { no: i + 1 }) })));
+    if (crops.some((c) => !c.no || c.soil === undefined || c.irrigation === undefined)) {
+      setCrops((x) => x.map((c, i) => ({ no: i + 1, name: '', soil: profile.soil || '', irrigation: profile.irrigation || '', ...c, ...(c.no ? {} : { no: i + 1 }) })));
     }
   }, [crops, setCrops, profile.soil, profile.irrigation]);
 
@@ -44,8 +41,31 @@ export function AppProvider({ children }) {
   // One-time migration: profiles saved before schema 2 carried a hardcoded demo name – clear it
   // so only a name the farmer enters (or one from auth) is ever shown.
   useEffect(() => {
-    if (profile.schema !== 2) setProfile((p) => ({ ...p, name: '', schema: 2 }));
+    if (!profile.schema || profile.schema < 2) setProfile((p) => ({ ...p, name: '', schema: 2 }));
   }, [profile.schema, setProfile]);
+
+  // Schema 3: drop the old built-in demo farm. Values the farmer never changed (the sample village,
+  // the sample 3-acre farm and the three sample fields) are cleared; anything they edited stays.
+  useEffect(() => {
+    if (profile.schema !== 2) return;
+    setProfile((p) => {
+      const next = { ...p, schema: 3 };
+      if (p.village === 'Kikkeri' && p.district === 'Mandya' && p.locationSource !== 'manual' && p.locationSource !== 'gps') {
+        Object.assign(next, { village: '', district: '', state: '' });
+      }
+      if (Number(p.landSize) === 3 && p.landType === 'mixed' && p.soil === 'red' && p.irrigation === 'borewell') {
+        Object.assign(next, { landSize: '', landType: '', soil: '', irrigation: '' });
+      }
+      return next;
+    });
+    const SAMPLE = { c1: ['ragi', 2], c2: ['tomato', 0.5], c3: ['maize', 0.5] };
+    setCrops((x) => x.filter((c) => !(SAMPLE[c.id] && !c.name && SAMPLE[c.id][0] === c.cropId && Number(c.acres) === SAMPLE[c.id][1])));
+    try {
+      localStorage.removeItem('ks-disc-v2'); // seeded sample discussions (feature removed)
+    } catch {
+      /* ignore */
+    }
+  }, [profile.schema, setProfile, setCrops]);
 
   const t = useCallback((key, vars) => translate(lang, key, vars), [lang]);
   const L = useCallback((obj) => loc(obj, lang), [lang]);
@@ -79,6 +99,11 @@ export function AppProvider({ children }) {
   const deleteTask = useCallback((id) => setTasks((x) => x.filter((tk) => tk.id !== id)), [setTasks]);
 
   // Each crop entry is a *field*: { id, no, name, cropId, acres, sowDate, soil, irrigation, health }.
+  // Crop-calendar completion (see below); declared first because editing a field resets it.
+  const [scheduleDone, setScheduleDone] = useLocalStorage('ks-schedule-done-v1', () =>
+    Object.fromEntries(crops.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))]))
+  );
+
   const addCrop = useCallback(
     (crop) => {
       const id = `c${Date.now()}`;
@@ -90,8 +115,27 @@ export function AppProvider({ children }) {
     },
     [setCrops, setActiveFieldId, profile.soil, profile.irrigation]
   );
-  const updateCrop = useCallback((id, patch) => setCrops((x) => x.map((c) => (c.id === id ? { ...c, ...patch } : c))), [setCrops]);
-  const removeCrop = useCallback((id) => setCrops((x) => x.filter((c) => c.id !== id)), [setCrops]);
+  const updateCrop = useCallback(
+    (id, patch) => {
+      const prev = crops.find((c) => c.id === id);
+      setCrops((x) => x.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+      // A different crop, sowing date or variety means a different schedule: old ticks no longer apply.
+      if (prev && ['cropId', 'sowDate', 'variant'].some((k) => k in patch && patch[k] !== prev[k])) {
+        setScheduleDone((m) => ({ ...m, [id]: {} }));
+      }
+    },
+    [crops, setCrops, setScheduleDone]
+  );
+  const removeCrop = useCallback(
+    (id) => {
+      setCrops((x) => x.filter((c) => c.id !== id));
+      setScheduleDone((m) => {
+        const { [id]: _gone, ...rest } = m; // eslint-disable-line no-unused-vars
+        return rest;
+      });
+    },
+    [setCrops, setScheduleDone]
+  );
   const setCropHealth = useCallback(
     (id, health) => setCrops((x) => x.map((c) => (c.id === id ? { ...c, health } : c))),
     [setCrops]
@@ -101,9 +145,14 @@ export function AppProvider({ children }) {
    * Shared by the Crop Calendar and the Home "Today's action" card so both update together.
    * First run: tasks that ended >3 days ago are pre-completed, so an existing farm isn't flooded
    * with "missed" items. Fields added later start clean (and have a "mark past done" button). */
-  const [scheduleDone, setScheduleDone] = useLocalStorage('ks-schedule-done-v1', () =>
-    Object.fromEntries(crops.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))]))
-  );
+  // Drop completion ticks of fields that no longer exist (e.g. removed sample fields).
+  useEffect(() => {
+    const ids = new Set(crops.map((c) => c.id));
+    if (Object.keys(scheduleDone).some((k) => !ids.has(k))) {
+      setScheduleDone((m) => Object.fromEntries(Object.entries(m).filter(([k]) => ids.has(k))));
+    }
+  }, [crops, scheduleDone, setScheduleDone]);
+
   const setScheduleTaskDone = useCallback(
     (fieldId, taskId, done = true) =>
       setScheduleDone((m) => {
@@ -123,8 +172,8 @@ export function AppProvider({ children }) {
   // that conflict with the real crop calendar. Remove those seed entries; user-made tasks stay.
   useEffect(() => {
     try {
-      if (localStorage.getItem('ks-demo-tasks-cleaned-v1')) return;
-      localStorage.setItem('ks-demo-tasks-cleaned-v1', '1');
+      if (localStorage.getItem('ks-demo-tasks-cleaned-v2')) return;
+      localStorage.setItem('ks-demo-tasks-cleaned-v2', '1');
     } catch {
       return;
     }
@@ -175,14 +224,13 @@ export function AppProvider({ children }) {
   /** Name to show in the UI: the farmer's own name, or a generic placeholder. */
   const displayName = profile.name?.trim() || translate(lang, 'common.farmer');
 
+  /** Clear every field, task and setting on this device (start over as a new farmer). */
   const resetDemo = useCallback(() => {
-    setProfile(demoProfile);
-    const fresh = initialCrops();
-    setCrops(fresh);
-    setScheduleDone(Object.fromEntries(fresh.map((f) => [f.id, Object.fromEntries(pastTaskIds(f).map((id) => [id, true]))])));
+    setProfile(defaultProfile);
+    setCrops(initialCrops());
+    setScheduleDone({});
     setTasks(initialTasks());
-    setDiscussions(initialDiscussions);
-    setLangState(demoProfile.language);
+    setLangState(defaultProfile.language);
     try {
       Object.keys(localStorage)
         .filter((k) => k.startsWith('ks-chat') || k.startsWith('ks-claim'))
@@ -190,7 +238,7 @@ export function AppProvider({ children }) {
     } catch {
       /* ignore */
     }
-  }, [setProfile, setCrops, setScheduleDone, setTasks, setDiscussions, setAuth]);
+  }, [setProfile, setCrops, setScheduleDone, setTasks, setAuth]);
 
   const value = useMemo(
     () => ({
@@ -201,14 +249,13 @@ export function AppProvider({ children }) {
       dataSaver, setDataSaver,
       tasks, addTask, toggleTask, deleteTask,
       scheduleDone, setScheduleTaskDone, markScheduleTasksDone,
-      discussions, setDiscussions,
       auth, login, logout,
       toasts, toast, dismissToast,
       loginOpen, setLoginOpen,
       resetDemo,
       today,
     }),
-    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone, discussions, setDiscussions, auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today]
+    [lang, setLang, t, L, profile, setProfile, displayName, crops, addCrop, updateCrop, removeCrop, setCropHealth, activeField, setActiveFieldId, dataSaver, setDataSaver, tasks, addTask, toggleTask, deleteTask, scheduleDone, setScheduleTaskDone, markScheduleTasksDone,  auth, login, logout, toasts, toast, dismissToast, loginOpen, resetDemo, today]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

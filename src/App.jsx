@@ -13,7 +13,6 @@ import Announcements from './pages/Announcements';
 import Insurance from './pages/Insurance';
 import CropDoctor from './pages/CropDoctor';
 import NearbyServices from './pages/NearbyServices';
-import Help from './pages/Help';
 import Settings from './pages/Settings';
 
 export default function App() {
@@ -32,7 +31,7 @@ export default function App() {
         <Route path="insurance" element={<Insurance />} />
         <Route path="crop-doctor" element={<CropDoctor />} />
         <Route path="nearby" element={<NearbyServices />} />
-        <Route path="help" element={<Help />} />
+        <Route path="help" element={<Navigate to="/community" replace />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />

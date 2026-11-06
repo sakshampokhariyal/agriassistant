@@ -16,6 +16,8 @@ import vision from './vision';
 import location from './location';
 import nearby from './nearby';
 import kb from './kb';
+import cleanup from './cleanup';
+import advisor from './advisor';
 import { APP_NAME } from '../config/brand';
 
 export const LANGUAGES = [
@@ -25,7 +27,7 @@ export const LANGUAGES = [
 ];
 
 /** Feature modules keep their own string tables; they are merged into one dictionary per language. */
-const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location, nearby, kb];
+const modules = [weatherLive, insurance, chat, features, liveFeeds, authEmail, community, phoneAuth, schedule, news, cropMaster, vision, location, nearby, kb, cleanup, advisor];
 export const dictionaries = Object.fromEntries(
   Object.entries({ en, hi, kn }).map(([code, base]) => [code, Object.assign({}, base, ...modules.map((m) => m[code] || {}))])
 );

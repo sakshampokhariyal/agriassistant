@@ -1,8 +1,8 @@
 import { FILE_PREFIX } from '../config/brand';
+import { fmtStamp } from '../utils/date';
 import { useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { cropCatalog } from '../data/farmer';
-import { localeOf } from '../translations';
 import { assessEligibility, summaryFields, validate } from '../utils/claims';
 import { downloadBlob } from '../utils/media';
 
@@ -16,7 +16,7 @@ export default function useClaimHelpers() {
   );
 
   const fmtDateTime = useCallback(
-    (date) => new Intl.DateTimeFormat(localeOf(lang), { dateStyle: 'medium', timeStyle: 'short' }).format(date),
+    (date) => fmtStamp(date, lang),
     [lang]
   );
 

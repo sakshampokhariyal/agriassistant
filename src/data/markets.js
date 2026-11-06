@@ -1,86 +1,78 @@
-import { addDays } from '../utils/date';
-
+/**
+ * Crops with a market on Agmarknet, the commodity name used by the data.gov.in mandi-price
+ * dataset, and the Minimum Support Price (₹/quintal) where the Government of India announces one.
+ *
+ * MSP sources (CACP / PIB press releases):
+ *   Kharif marketing season 2025-26 – paddy, jowar, bajra, ragi, maize, tur, moong, urad,
+ *   groundnut, soybean, cotton (medium staple).
+ *   Rabi marketing season 2026-27 – wheat, rapeseed & mustard.
+ *   Raw jute 2025-26; milling copra 2025 (coconut); sugarcane FRP 2025-26.
+ * Prices themselves are never generated here – they always come live from Agmarknet.
+ */
 const L = (en, hi, kn) => ({ en, hi, kn });
 
 export const marketCrops = {
-  ragi: { name: L('Ragi', 'रागी', 'ರಾಗಿ'), base: 4350, trend: 7, msp: 4290, spread: 180 },
-  maize: { name: L('Maize', 'मक्का', 'ಮೆಕ್ಕೆಜೋಳ'), base: 2250, trend: -2, msp: 2225, spread: 120 },
-  tomato: { name: L('Tomato', 'टमाटर', 'ಟೊಮೆಟೊ'), base: 2400, trend: 14, msp: null, spread: 600 },
-  paddy: { name: L('Paddy', 'धान', 'ಭತ್ತ'), base: 2350, trend: 1, msp: 2369, spread: 110 },
+  ragi: { name: L('Ragi', 'रागी', 'ರಾಗಿ'), commodity: 'Ragi (Finger Millet)', msp: 4886, mspSeason: '2025-26' },
+  paddy: { name: L('Paddy', 'धान', 'ಭತ್ತ'), commodity: 'Paddy(Dhan)(Common)', msp: 2369, mspSeason: '2025-26' },
+  maize: { name: L('Maize', 'मक्का', 'ಮೆಕ್ಕೆಜೋಳ'), commodity: 'Maize', msp: 2400, mspSeason: '2025-26' },
+  wheat: { name: L('Wheat', 'गेहूं', 'ಗೋಧಿ'), commodity: 'Wheat', msp: 2585, mspSeason: '2026-27' },
+  jowar: { name: L('Jowar', 'ज्वार', 'ಜೋಳ'), commodity: 'Jowar(Sorghum)', msp: 3699, mspSeason: '2025-26' },
+  bajra: { name: L('Bajra', 'बाजरा', 'ಸಜ್ಜೆ'), commodity: 'Bajra(Pearl Millet/Cumbu)', msp: 2775, mspSeason: '2025-26' },
+  redgram: { name: L('Tur (Red gram)', 'अरहर (तूर)', 'ತೊಗರಿ'), commodity: 'Arhar (Tur/Red Gram)(Whole)', msp: 8000, mspSeason: '2025-26' },
+  greengram: { name: L('Moong (Green gram)', 'मूंग', 'ಹೆಸರು'), commodity: 'Green Gram (Moong)(Whole)', msp: 8768, mspSeason: '2025-26' },
+  blackgram: { name: L('Urad (Black gram)', 'उड़द', 'ಉದ್ದು'), commodity: 'Black Gram (Urd Beans)(Whole)', msp: 7800, mspSeason: '2025-26' },
+  cowpea: { name: L('Cowpea', 'लोबिया', 'ಅಲಸಂದೆ'), commodity: 'Cowpea(Lobia/Karamani)', msp: null },
+  groundnut: { name: L('Groundnut', 'मूंगफली', 'ಕಡಲೆಕಾಯಿ'), commodity: 'Groundnut', msp: 7263, mspSeason: '2025-26' },
+  soybean: { name: L('Soybean', 'सोयाबीन', 'ಸೋಯಾಬೀನ್'), commodity: 'Soyabean', msp: 5328, mspSeason: '2025-26' },
+  mustard: { name: L('Mustard', 'सरसों', 'ಸಾಸಿವೆ'), commodity: 'Mustard', msp: 6200, mspSeason: '2026-27' },
+  cotton: { name: L('Cotton', 'कपास', 'ಹತ್ತಿ'), commodity: 'Cotton', msp: 7710, mspSeason: '2025-26' },
+  jute: { name: L('Jute', 'जूट', 'ಸೆಣಬು'), commodity: 'Jute', msp: 5650, mspSeason: '2025-26' },
+  sugarcane: { name: L('Sugarcane', 'गन्ना', 'ಕಬ್ಬು'), commodity: 'Sugarcane', msp: 355, mspSeason: 'FRP 2025-26' },
+  tomato: { name: L('Tomato', 'टमाटर', 'ಟೊಮೆಟೊ'), commodity: 'Tomato', msp: null },
+  coconut: { name: L('Coconut', 'नारियल', 'ತೆಂಗು'), commodity: 'Coconut', msp: null },
+  pepper: { name: L('Black pepper', 'काली मिर्च', 'ಕರಿಮೆಣಸು'), commodity: 'Black pepper', msp: null },
+  rubber: { name: L('Rubber', 'रबड़', 'ರಬ್ಬರ್'), commodity: 'Rubber', msp: null },
 };
 
-export const mandis = [
-  { id: 'mandya', name: L('Mandya APMC', 'मांड्या एपीएमसी', 'ಮಂಡ್ಯ ಎಪಿಎಂಸಿ'), km: 8, offset: 0 },
-  { id: 'mysuru', name: L('Mysuru APMC', 'मैसूरु एपीएमसी', 'ಮೈಸೂರು ಎಪಿಎಂಸಿ'), km: 47, offset: 60 },
-  { id: 'bengaluru', name: L('Bengaluru (Yeshwanthpur)', 'बेंगलुरु (येशवंतपुर)', 'ಬೆಂಗಳೂರು (ಯಶವಂತಪುರ)'), km: 98, offset: 180 },
-  { id: 'hassan', name: L('Hassan APMC', 'हासन एपीएमसी', 'ಹಾಸನ ಎಪಿಎಂಸಿ'), km: 104, offset: -40 },
-  { id: 'tumakuru', name: L('Tumakuru APMC', 'तुमकुरु एपीएमसी', 'ತುಮಕೂರು ಎಪಿಎಂಸಿ'), km: 128, offset: 90 },
-];
-
-export const TRANSPORT_PER_KM = 1.2; // ₹ per quintal per km (demo)
-
-const hash = (s) => {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return Math.abs(h);
+/**
+ * How each crop is named in Agmarknet records. The API's commodity filter matches loosely
+ * (a "Tur" query also returns black gram, green gram and dals), so rows are checked again here.
+ */
+export const COMMODITY_MATCH = {
+  ragi: [/ragi|finger millet/i],
+  paddy: [/paddy|dhan/i],
+  maize: [/maize/i],
+  wheat: [/^wheat/i],
+  jowar: [/jowar|sorghum/i],
+  bajra: [/bajra|pearl millet|cumbu/i],
+  redgram: [/arhar|red ?gram|\btur\b/i, /dal|turmeric/i],
+  greengram: [/green ?gram|moong/i, /dal/i],
+  blackgram: [/black ?gram|urd|urad/i, /dal/i],
+  cowpea: [/cowpea|lobia|karamani|alasande/i, /dal/i],
+  groundnut: [/groundnut/i],
+  soybean: [/soya/i],
+  mustard: [/mustard/i, /oil/i],
+  cotton: [/cotton/i, /seed/i],
+  jute: [/jute/i],
+  sugarcane: [/sugarcane/i],
+  tomato: [/tomato/i],
+  coconut: [/coconut|copra/i, /oil/i],
+  pepper: [/pepper/i, /green|chilli|capsicum/i],
+  rubber: [/rubber/i],
 };
 
-/** Deterministic mock price series, newest last. */
-export function getSeries(cropId, mandiId, days) {
-  const c = marketCrops[cropId];
-  const m = mandis.find((x) => x.id === mandiId);
-  const seed = hash(cropId + mandiId);
-  const out = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const noise = Math.sin((seed % 17) + i * 0.9) * c.spread * 0.18 + Math.cos(i * 1.7 + (seed % 5)) * c.spread * 0.1;
-    const modal = Math.round(c.base + m.offset - i * c.trend + noise);
-    const spread = c.spread * (0.55 + ((seed + i) % 5) / 10);
-    out.push({
-      date: addDays(-i),
-      modal,
-      min: Math.round(modal - spread / 2),
-      max: Math.round(modal + spread / 2),
-    });
-  }
-  return out;
-}
-
-export function todayPrices(cropId) {
-  return mandis.map((m) => {
-    const s = getSeries(cropId, m.id, 8);
-    const t = s[s.length - 1];
-    const week = s[0];
-    return { ...m, ...t, change: t.modal - week.modal, net: Math.round(t.modal - m.km * TRANSPORT_PER_KM) };
-  });
-}
-
-const T = {
-  en: ({ crop, mandi, net, gain, trend }) =>
-    trend > 0
-      ? `${crop} prices are rising (+₹${trend} this week). ${mandi} gives the best price after transport (≈ ₹${net}/quintal), ₹${gain} more than your local mandi. If you are close to harvest, plan to sell there or hold stock a few days.`
-      : `${crop} prices are flat or easing. ${mandi} still gives the best price after transport (≈ ₹${net}/quintal), ₹${gain} more than your local mandi. Consider selling soon.`,
-  hi: ({ crop, mandi, net, gain, trend }) =>
-    trend > 0
-      ? `${crop} के भाव बढ़ रहे हैं (इस हफ्ते +₹${trend})। ढुलाई के बाद ${mandi} में सबसे अच्छा भाव है (≈ ₹${net}/क्विंटल), स्थानीय मंडी से ₹${gain} अधिक। कटाई के पास हों तो वहीं बेचने की योजना बनाएं या कुछ दिन रोकें।`
-      : `${crop} के भाव स्थिर या कम हो रहे हैं। ढुलाई के बाद भी ${mandi} में सबसे अच्छा भाव है (≈ ₹${net}/क्विंटल), स्थानीय मंडी से ₹${gain} अधिक। जल्द बेचने पर विचार करें।`,
-  kn: ({ crop, mandi, net, gain, trend }) =>
-    trend > 0
-      ? `${crop} ಬೆಲೆ ಏರುತ್ತಿದೆ (ಈ ವಾರ +₹${trend}). ಸಾಗಣೆ ನಂತರ ${mandi} ನಲ್ಲಿ ಉತ್ತಮ ಬೆಲೆ (≈ ₹${net}/ಕ್ವಿಂಟಾಲ್), ಸ್ಥಳೀಯ ಮಂಡಿಗಿಂತ ₹${gain} ಹೆಚ್ಚು. ಕೊಯ್ಲು ಹತ್ತಿರವಿದ್ದರೆ ಅಲ್ಲಿ ಮಾರಲು ಯೋಜಿಸಿ ಅಥವಾ ಕೆಲವು ದಿನ ದಾಸ್ತಾನು ಇಡಿ.`
-      : `${crop} ಬೆಲೆ ಸ್ಥಿರ ಅಥವಾ ಇಳಿಮುಖ. ಸಾಗಣೆ ನಂತರವೂ ${mandi} ನಲ್ಲಿ ಉತ್ತಮ ಬೆಲೆ (≈ ₹${net}/ಕ್ವಿಂಟಾಲ್), ಸ್ಥಳೀಯ ಮಂಡಿಗಿಂತ ₹${gain} ಹೆಚ್ಚು. ಬೇಗ ಮಾರುವುದನ್ನು ಪರಿಗಣಿಸಿ.`,
+/** True when an Agmarknet commodity name belongs to the crop (unknown names are kept). */
+export const matchesCrop = (cropId, name) => {
+  const m = COMMODITY_MATCH[cropId];
+  if (!m || !name) return true;
+  const [inc, exc] = m;
+  return inc.test(name) && !(exc && exc.test(name));
 };
 
-export function getRecommendation(lang, cropId) {
-  const rows = todayPrices(cropId);
-  const best = [...rows].sort((a, b) => b.net - a.net)[0];
-  const local = rows.find((r) => r.id === 'mandya');
-  const trend = rows.find((r) => r.id === 'mandya').change;
-  const c = marketCrops[cropId];
-  const text = T[lang]({
-    crop: c.name[lang],
-    mandi: best.name[lang],
-    net: best.net,
-    gain: Math.max(0, best.net - local.net),
-    trend,
-  });
-  return { text, best, trend };
-}
+/** Median of a list of numbers (robust "typical" mandi price). */
+export const median = (xs) => {
+  const s = [...xs].sort((a, b) => a - b);
+  if (!s.length) return null;
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+};

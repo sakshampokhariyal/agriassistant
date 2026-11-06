@@ -13,7 +13,7 @@ import { EmptyState, SectionTitle } from '../ui';
 import FieldTabs from '../FieldTabs';
 import { TYPE_STYLE, STATUS_STYLE } from './scheduleStyles';
 
-const PHASE_COLORS = ['#a3e635', '#22c55e', '#15803d', '#d97706', '#b45309'];
+const PHASE_COLORS = ['#58a73c', '#1b7a32', '#17512f', '#e9a84f', '#a96d1b'];
 const FILTERS = ['all', 'today', 'overdue', 'upcoming', 'done'];
 
 /** Crop Calendar: dated cultivation schedule for the selected field (from data/cropSchedules.js). */
@@ -169,8 +169,8 @@ function CropHeader({ field, plan, onUpdate }) {
       </div>
 
       {plan.routines?.map((r) => (
-        <div key={r.key} className="mt-4 rounded-2xl bg-sky-50 border border-sky-200 p-3 text-sm text-forest-800">
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-sky-800">{t('kb.routine')} · {L(r.title)}</span>
+        <div key={r.key} className="mt-4 rounded-2xl bg-navy-50 border border-navy-200 p-3 text-sm text-forest-800">
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-navy-800">{t('kb.routine')} · {L(r.title)}</span>
           {L(r.detail)}
         </div>
       ))}

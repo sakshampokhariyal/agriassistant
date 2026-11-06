@@ -99,8 +99,8 @@ export default function LoginModal() {
       ) : (
       <>
       {localMode && (
-        <p className="mb-4 flex gap-2 rounded-xl bg-sky-100/70 border border-sky-500/20 p-3 text-sm text-forest-800">
-          <HardDrive size={16} className="shrink-0 mt-0.5 text-sky-500" /> {t('auth.localNote')}
+        <p className="mb-4 flex gap-2 rounded-xl bg-navy-100/70 border border-navy-500/20 p-3 text-sm text-forest-800">
+          <HardDrive size={16} className="shrink-0 mt-0.5 text-navy-500" /> {t('auth.localNote')}
         </p>
       )}
 
@@ -330,8 +330,8 @@ function PhoneFlow({ onDone }) {
       <button className="btn-primary w-full" disabled={busy}>
         {busy ? <RefreshCw size={18} className="animate-spin" /> : <MessageSquareText size={18} />} {t('auth.sendOtp')}
       </button>
-      <p className="flex gap-2 rounded-xl bg-sky-100/70 border border-sky-500/20 p-3 text-xs text-forest-800">
-        <HardDrive size={15} className="shrink-0 mt-0.5 text-sky-500" aria-hidden /> {t('auth.phoneLocalNote')}
+      <p className="flex gap-2 rounded-xl bg-navy-100/70 border border-navy-500/20 p-3 text-xs text-forest-800">
+        <HardDrive size={15} className="shrink-0 mt-0.5 text-navy-500" aria-hidden /> {t('auth.phoneLocalNote')}
       </p>
       <div className="text-right">
         <button type="button" className="text-sm font-semibold text-forest-600 underline min-h-[44px]" onClick={onDone}>

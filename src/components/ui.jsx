@@ -1,35 +1,11 @@
-import { FlaskConical, Inbox } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { Inbox } from 'lucide-react';
 
-export function DemoBadge({ className = '' }) {
-  const { t } = useApp();
-  return (
-    <span
-      title={t('common.demoNote')}
-      className={`inline-flex items-center gap-1 rounded-full bg-earth-100 text-earth-700 text-xs font-bold px-2.5 py-1 ${className}`}
-    >
-      <FlaskConical size={13} aria-hidden /> {t('common.demo')}
-    </span>
-  );
-}
-
-export function DemoNote({ className = '' }) {
-  const { t } = useApp();
-  return (
-    <p className={`flex items-start gap-2 text-xs text-earth-700 bg-earth-100/70 rounded-xl px-3 py-2 ${className}`}>
-      <FlaskConical size={14} className="mt-0.5 shrink-0" aria-hidden />
-      <span>{t('common.demoNote')}</span>
-    </p>
-  );
-}
-
-export function PageHeader({ title, subtitle, action, demo = false }) {
+export function PageHeader({ title, subtitle, action }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
       <div className="min-w-0">
         <h1 className="text-2xl md:text-3xl font-extrabold text-forest-800 leading-tight">{title}</h1>
         {subtitle && <p className="text-forest-600/80 mt-1 max-w-2xl">{subtitle}</p>}
-        {demo && <DemoBadge className="mt-2" />}
       </div>
       {action}
     </div>
@@ -53,7 +29,7 @@ export function Badge({ children, tone = 'green', className = '' }) {
     green: 'bg-forest-50 text-forest-700',
     amber: 'bg-earth-100 text-earth-700',
     red: 'bg-clay-100 text-clay-600',
-    sky: 'bg-sky-100 text-sky-500',
+    sky: 'bg-navy-100 text-navy-500',
     gray: 'bg-cream-200 text-forest-700',
   };
   return (

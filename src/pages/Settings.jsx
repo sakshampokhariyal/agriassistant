@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { fmtStamp } from '../utils/date';
 import { Link } from 'react-router-dom';
 import { CloudOff, Database, Feather, Globe, HardDrive, ImageOff, RefreshCw, UserRound, Wifi, Zap, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -24,7 +25,7 @@ export default function Settings() {
   const weather = useWeather();
   const online = useOnline();
   const kb = useMemo(storageKB, [crops, tasks, weather.updatedAt, dataSaver]);
-  const time = (ms) => new Date(ms).toLocaleString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { dateStyle: 'medium', timeStyle: 'short' });
+  const time = (ms) => fmtStamp(ms, lang);
 
   const toggle = () => {
     setDataSaver(!dataSaver);

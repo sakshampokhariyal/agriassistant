@@ -4,8 +4,8 @@ const map = {
   sunny: { Icon: Sun, color: 'text-earth-400' },
   partly: { Icon: CloudSun, color: 'text-earth-400' },
   cloudy: { Icon: Cloud, color: 'text-forest-300' },
-  rain: { Icon: CloudDrizzle, color: 'text-sky-500' },
-  heavyRain: { Icon: CloudRain, color: 'text-sky-500' },
+  rain: { Icon: CloudDrizzle, color: 'text-navy-500' },
+  heavyRain: { Icon: CloudRain, color: 'text-navy-500' },
   thunder: { Icon: CloudLightning, color: 'text-earth-500' },
 };
 

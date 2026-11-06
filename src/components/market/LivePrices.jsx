@@ -3,7 +3,7 @@ import { BadgeCheck, CloudOff, ExternalLink, RefreshCw, Trophy } from 'lucide-re
 import { useApp } from '../../context/AppContext';
 import { AGMARKNET_PAGE, fetchMandiPrices } from '../../services/agmarknet';
 import { marketCrops } from '../../data/markets';
-import { fmtNum } from '../../utils/date';
+import { fmtNum, fmtStamp } from '../../utils/date';
 import { SectionTitle, Skeleton } from '../ui';
 
 const ERR = { timeout: 'timeout', rate_limited: 'rate', no_records: 'empty', network: 'network' };
@@ -33,7 +33,7 @@ export default function LivePrices({ cropId, onRows }) {
 
   const r = state.result;
   const msp = marketCrops[cropId]?.msp;
-  const time = (ms) => new Date(ms).toLocaleString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { dateStyle: 'medium', timeStyle: 'short' });
+  const time = (ms) => fmtStamp(ms, lang);
   const best = r?.rows?.[0];
 
   return (
@@ -52,10 +52,6 @@ export default function LivePrices({ cropId, onRows }) {
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 font-semibold">
                 <CloudOff size={13} /> {t('mk.live.cached', { time: time(r.fetchedAt) })}
               </span>
-            ) : r ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 font-semibold">
-                <CloudOff size={13} /> {t('mk.live.mock')}
-              </span>
             ) : null}
             {r?.error && r.source !== 'live' && <span className="text-forest-600">{t(`mk.err.${errKey(r.error)}`)}</span>}
           </div>
@@ -67,6 +63,11 @@ export default function LivePrices({ cropId, onRows }) {
 
       {state.loading && !r ? (
         <div className="space-y-2 mt-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+      ) : r && !r.rows.length ? (
+        <div className="mt-4 rounded-2xl bg-cream-100 p-4 text-sm text-forest-700 flex gap-2">
+          <CloudOff size={18} className="shrink-0 text-forest-500" />
+          <span>{t(r.error === 'no_records' ? 'mk.live.noRecords' : 'mk.live.unavailable')}</span>
+        </div>
       ) : r ? (
         <>
           {best && (
@@ -103,8 +104,8 @@ export default function LivePrices({ cropId, onRows }) {
             })}
           </ul>
           <p className="text-xs text-forest-600/80 mt-3 flex flex-wrap items-center gap-x-2">
-            <span>{r.source === 'mock' ? t('common.demoNote') : t('mk.live.note')}</span>
-            {msp && <span>{t('market.msp')}: ₹{fmtNum(msp, lang)}</span>}
+            <span>{t('mk.live.note')}</span>
+            {msp && <span>{t('market.msp')} {marketCrops[cropId].mspSeason}: ₹{fmtNum(msp, lang)}</span>}
             <a href={AGMARKNET_PAGE} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-700 underline">
               data.gov.in <ExternalLink size={12} />
             </a>

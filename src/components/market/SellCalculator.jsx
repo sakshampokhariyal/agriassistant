@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Calculator, IndianRupee } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { TRANSPORT_PER_KM, marketCrops, todayPrices } from '../../data/markets';
+import { marketCrops } from '../../data/markets';
 import { fmtNum } from '../../utils/date';
 import { Field, SectionTitle } from '../ui';
 
@@ -11,7 +11,7 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
   const [cropId, setCropId] = useState(initialCrop);
   const [mandiId, setMandiId] = useState('');
   const [unit, setUnit] = useState('q'); // q | kg
-  const [qty, setQty] = useState('20');
+  const [qty, setQty] = useState('');
   const [price, setPrice] = useState('');
   const [transport, setTransport] = useState('');
   const [commission, setCommission] = useState('2');
@@ -19,14 +19,11 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
 
   useEffect(() => setCropId(initialCrop), [initialCrop]);
 
-  // Live Agmarknet markets when available for this crop, otherwise the demo mandis.
-  const isLive = !!(live && live.cropId === cropId && live.source !== 'mock' && live.rows?.length);
+  // Markets come from live (or last saved) Agmarknet prices; without them the farmer types the price.
+  const isLive = !!(live && live.cropId === cropId && live.rows?.length);
   const options = useMemo(
-    () =>
-      isLive
-        ? live.rows.slice(0, 40).map((r) => ({ id: r.id, label: `${r.market}${r.district ? `, ${r.district}` : ''}`, modal: r.modal, km: null }))
-        : todayPrices(cropId).map((r) => ({ id: r.id, label: `${L(r.name)} (${r.km} ${t('market.km')})`, modal: r.modal, km: r.km })),
-    [isLive, live, cropId, L, t]
+    () => (isLive ? live.rows.slice(0, 40).map((r) => ({ id: r.id, label: `${r.market}${r.district ? `, ${r.district}` : ''}`, modal: r.modal })) : []),
+    [isLive, live]
   );
   const row = options.find((o) => o.id === mandiId) || options[0];
   const quintals = (Number(qty) || 0) / (unit === 'kg' ? 100 : 1);
@@ -35,9 +32,6 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
   useEffect(() => {
     if (row) setPrice(String(row.modal));
   }, [row?.id, row?.modal]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (row?.km != null) setTransport(String(Math.round(row.km * TRANSPORT_PER_KM * quintals)));
-  }, [row?.id, row?.km, quintals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const gross = quintals * (Number(price) || 0);
   const transportCost = Number(transport) || 0;
@@ -56,10 +50,14 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
           </select>
         </Field>
         <Field label={t('market.mandi')}>
-          <select className="input" value={row?.id || ''} onChange={(e) => setMandiId(e.target.value)}>
-            {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
-          <span className={`mt-1 block text-xs ${isLive ? 'text-emerald-700' : 'text-earth-700'}`}>{isLive ? t('mk.calc.livePrice') : t('mk.calc.demoPrice')}</span>
+          {isLive ? (
+            <select className="input" value={row?.id || ''} onChange={(e) => setMandiId(e.target.value)}>
+              {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          ) : (
+            <input className="input" disabled value={t('mk.calc.noLive')} />
+          )}
+          <span className={`mt-1 block text-xs ${isLive ? 'text-emerald-700' : 'text-earth-700'}`}>{isLive ? t('mk.calc.livePrice') : t('mk.calc.typePrice')}</span>
         </Field>
         <Field label={t('mk.qty')}>
           <div className="flex gap-2">
@@ -78,7 +76,7 @@ export default function SellCalculator({ cropId: initialCrop = 'ragi', live = nu
         </Field>
         <Field label={`${t('mk.transport')} (₹)`}>
           <input className="input" type="number" min="0" inputMode="numeric" value={transport} onChange={(e) => setTransport(e.target.value)} />
-          {row?.km == null && <span className="mt-1 block text-xs text-forest-600">{t('mk.calc.enterTransport')}</span>}
+          <span className="mt-1 block text-xs text-forest-600">{t('mk.calc.enterTransport')}</span>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={`${t('mk.commission')} (%)`}>

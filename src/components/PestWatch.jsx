@@ -7,7 +7,7 @@ import { pestGuides } from '../data/communityTools';
 const TYPE_STYLE = {
   fungus: { icon: Leaf, cls: 'bg-earth-100 text-earth-700' },
   virus: { icon: AlertTriangle, cls: 'bg-red-50 text-red-600' },
-  insect: { icon: Bug, cls: 'bg-violet-50 text-violet-700' },
+  insect: { icon: Bug, cls: 'bg-navy-50 text-navy-700' },
 };
 
 export default function PestWatch() {

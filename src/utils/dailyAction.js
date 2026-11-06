@@ -26,11 +26,13 @@ export function buildDailyActions({ weather, fields, tasks, fieldName, calendarT
   const cur = weather?.data?.current;
   const status = weather?.decision?.status;
   const rainy = status === 'doNot';
+  // Field advice needs a field: with none added, only the farmer's own to-dos are listed.
+  const hasFields = fields.length > 0;
 
-  if (rainy && d0) {
+  if (hasFields && rainy && d0) {
     out.push({ id: 'rain-protect', icon: 'rain', priority: 100, key: 'rainProtect', vars: { prob: d0.prob ?? '–', mm: d0.mm != null ? d0.mm.toFixed(1) : '–' }, reasons: ['weather'] });
   }
-  if (!rainy && d0?.hi != null && d0.hi >= 32) {
+  if (hasFields && !rainy && d0?.hi != null && d0.hi >= 32) {
     out.push({ id: 'spray-evening', icon: 'sun', priority: 90, key: 'sprayEvening', vars: { temp: Math.round(d0.hi) }, reasons: ['weather'] });
   }
   if (cur?.humidity != null && cur.humidity > 80) {
@@ -61,9 +63,9 @@ export function buildDailyActions({ weather, fields, tasks, fieldName, calendarT
     .slice(0, 2)
     .forEach((x) => out.push({ id: `task-${x.id}`, icon: 'task', priority: x.date < today ? 80 : 70, key: 'finishTask', vars: { task: x.title }, reasons: ['calendar'], taskId: x.id }));
 
-  if (status === 'safe' || status === 'scheduled') {
+  if (hasFields && (status === 'safe' || status === 'scheduled')) {
     out.push({ id: 'irrigate', icon: 'water', priority: status === 'scheduled' ? 60 : 40, key: status === 'scheduled' ? 'irrigateCool' : 'irrigateNormal', vars: {}, reasons: ['weather'] });
   }
-  out.push({ id: 'walk-fields', icon: 'leaf', priority: 10, key: 'walkFields', vars: {}, reasons: ['routine'] });
+  if (hasFields) out.push({ id: 'walk-fields', icon: 'leaf', priority: 10, key: 'walkFields', vars: {}, reasons: ['routine'] });
   return out.sort((a, b) => b.priority - a.priority);
 }

@@ -27,7 +27,7 @@ export default function Profile() {
     e.preventDefault();
     if (!form.name.trim()) return setErrors({ name: t('profile.nameRequired') });
     setErrors({});
-    const next = { ...form, name: form.name.trim(), landSize: Math.max(0, Number(form.landSize) || 0) };
+    const next = { ...form, name: form.name.trim(), landSize: form.landSize === '' ? '' : Math.max(0, Number(form.landSize) || 0) };
     // A location typed by the farmer wins over device detection from now on.
     if (['village', 'district', 'state'].some((k) => (form[k] || '') !== (profile[k] || ''))) next.locationSource = 'manual';
     setProfile(next);
@@ -122,9 +122,9 @@ export default function Profile() {
                 <SectionTitle>{t('profile.personal')}</SectionTitle>
                 <dl>
                   <Row label={t('profile.name')} value={profile.name || '—'} />
-                  <Row label={t('profile.village')} value={profile.village} />
-                  <Row label={t('profile.district')} value={profile.district} />
-                  <Row label={t('profile.state')} value={profile.state} />
+                  <Row label={t('profile.village')} value={profile.village || '—'} />
+                  <Row label={t('profile.district')} value={profile.district || '—'} />
+                  <Row label={t('profile.state')} value={profile.state || '—'} />
                   {auth.phone ? (
                     <Row label={t('profile.phone')} value={formatPhone(auth.phone)} />
                   ) : (
@@ -136,14 +136,15 @@ export default function Profile() {
               <section className="card p-5">
                 <SectionTitle>{t('profile.farmDetails')}</SectionTitle>
                 <dl>
-                  <Row label={t('profile.land')} value={`${profile.landSize} ${t('common.acres')}`} />
-                  <Row label={t('profile.landType')} value={t('opt.landType.' + profile.landType)} />
-                  <Row label={t('profile.soil')} value={t('opt.soil.' + profile.soil)} />
-                  <Row label={t('profile.irrigation')} value={t('opt.irr.' + profile.irrigation)} />
+                  <Row label={t('profile.land')} value={profile.landSize ? `${profile.landSize} ${t('common.acres')}` : '—'} />
+                  <Row label={t('profile.landType')} value={profile.landType ? t('opt.landType.' + profile.landType) : '—'} />
+                  <Row label={t('profile.soil')} value={profile.soil ? t('opt.soil.' + profile.soil) : '—'} />
+                  <Row label={t('profile.irrigation')} value={profile.irrigation ? t('opt.irr.' + profile.irrigation) : '—'} />
                 </dl>
               </section>
               <section className="card p-5">
                 <SectionTitle icon={Sprout}>{t('profile.crops')}</SectionTitle>
+                {crops.length === 0 && <p className="text-forest-600">{t('home.crops.empty')}</p>}
                 <ul className="grid sm:grid-cols-2 gap-3">
                   {crops.map((c) => (
                     <li key={c.id} className="rounded-xl bg-cream-100 p-3">
@@ -174,16 +175,19 @@ export default function Profile() {
                 <Field label={t('profile.land')}><input className="input" type="number" min="0" step="0.1" value={form.landSize} onChange={set('landSize')} /></Field>
                 <Field label={t('profile.landType')}>
                   <select className="input" value={form.landType} onChange={set('landType')}>
+                    <option value="">{t('common.select')}</option>
                     {landTypeOptions.map((o) => <option key={o} value={o}>{t('opt.landType.' + o)}</option>)}
                   </select>
                 </Field>
                 <Field label={t('profile.soil')}>
                   <select className="input" value={form.soil} onChange={set('soil')}>
+                    <option value="">{t('common.select')}</option>
                     {soilOptions.map((o) => <option key={o} value={o}>{t('opt.soil.' + o)}</option>)}
                   </select>
                 </Field>
                 <Field label={t('profile.irrigation')}>
                   <select className="input" value={form.irrigation} onChange={set('irrigation')}>
+                    <option value="">{t('common.select')}</option>
                     {irrigationOptions.map((o) => <option key={o} value={o}>{t('opt.irr.' + o)}</option>)}
                   </select>
                 </Field>

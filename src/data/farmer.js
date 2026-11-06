@@ -1,20 +1,23 @@
-import { addDays } from '../utils/date';
 import { scheduleParams, schedulePhases } from './cropSchedules';
 import { CROP_MASTER, STAGE_NAMES, seasonForMonth } from './cropMasterData';
 
 const L = (en, hi, kn) => ({ en, hi, kn });
 
-export const demoProfile = {
-  name: '', // generic: filled in by the farmer (or from auth) – never a hardcoded person
-  schema: 2,
+/**
+ * Starting profile for a new farmer: nothing is invented. Name, land and location are filled in
+ * by the farmer (Profile) or detected from the device (LocationContext).
+ */
+export const defaultProfile = {
+  name: '',
+  schema: 3,
   phone: '',
-  village: 'Kikkeri',
-  district: 'Mandya',
-  state: 'Karnataka',
-  landSize: 3,
-  landType: 'mixed',
-  soil: 'red',
-  irrigation: 'borewell',
+  village: '',
+  district: '',
+  state: '',
+  landSize: '',
+  landType: '',
+  soil: '',
+  irrigation: '',
   language: 'kn',
 };
 
@@ -82,11 +85,8 @@ Object.values(cropCatalog).forEach((c) => {
 /** Label for the field's start date: sowing, transplanting (tobacco) or planting (plantations). */
 export const dateLabelKey = (cropId) => (cropCatalog[cropId]?.perennial ? 'kb.plantDate' : cropId === 'tobacco' ? 'kb.transplantDate' : 'crops.sowDate');
 
-export const initialCrops = () => [
-  { id: 'c1', cropId: 'ragi', acres: 2, sowDate: addDays(-40), health: 'healthy' },
-  { id: 'c2', cropId: 'tomato', acres: 0.5, sowDate: addDays(-52), health: 'watch' },
-  { id: 'c3', cropId: 'maize', acres: 0.5, sowDate: addDays(-25), health: 'healthy' },
-];
+/** A new farmer starts with no fields – they add their own on My Crops. */
+export const initialCrops = () => [];
 
 export const soilOptions = ['red', 'black', 'sandy', 'laterite'];
 export const landTypeOptions = ['irrigated', 'rainfed', 'mixed'];

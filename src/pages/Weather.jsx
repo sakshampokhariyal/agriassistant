@@ -1,15 +1,13 @@
-import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, BellPlus, CheckCircle2, Circle, CloudRain, Droplets, MapPin, RefreshCw, Sparkles, Thermometer,
-  Umbrella, Wind, Sun, Ban, Clock, Sprout, Info,
+  AlertTriangle, BellPlus, CheckCircle2, Droplets, MapPin, RefreshCw, Sparkles,
+  Wind, Sun, Ban, Clock, Sprout, Info,
 } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useApp } from '../context/AppContext';
 import { useWeather } from '../context/WeatherContext';
 import { useChat } from '../context/ChatContext';
 import { conditionFromCode } from '../services/weather';
-import { demoQuestion } from '../data/ai';
-import { addDays, fmtDate, fmtWeekday, toISO } from '../utils/date';
+import { addDays, fmtDate, fmtWeekday, toISO, fmtStamp } from '../utils/date';
 import { alertText, dayLabel, fmt, placeLabel } from '../utils/weatherText';
 import { Badge, PageHeader, SectionTitle, Skeleton } from '../components/ui';
 import WeatherIcon from '../components/WeatherIcon';
@@ -18,7 +16,7 @@ import WeatherIcon from '../components/WeatherIcon';
 export const TONE = {
   red: { panel: 'bg-red-700', chip: 'bg-red-100 text-red-800', dot: 'bg-red-500', icon: Ban },
   amber: { panel: 'bg-amber-700', chip: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500', icon: Clock },
-  blue: { panel: 'bg-sky-700', chip: 'bg-sky-100 text-sky-800', dot: 'bg-sky-500', icon: Sun },
+  blue: { panel: 'bg-navy-700', chip: 'bg-navy-100 text-navy-800', dot: 'bg-navy-500', icon: Sun },
   green: { panel: 'bg-emerald-700', chip: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500', icon: CheckCircle2 },
   gray: { panel: 'bg-forest-700', chip: 'bg-cream-200 text-forest-800', dot: 'bg-forest-400', icon: Info },
 };
@@ -31,7 +29,7 @@ const RULE_ORDER = [
 ];
 
 export default function Weather() {
-  const { t, L, lang, tasks, addTask, toast, today: todayDate } = useApp();
+  const { t, lang, tasks, addTask, toast, today: todayDate } = useApp();
   const w = useWeather();
   const chat = useChat();
 
@@ -61,7 +59,7 @@ export default function Weather() {
       subtitle={
         <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="inline-flex items-center gap-1"><MapPin size={15} /> {placeLabel(w, t)}</span>
-          {w.updatedAt && <span className="text-forest-500/80">· {t('wx.updated', { time: new Date(w.updatedAt).toLocaleString(lang === 'en' ? 'en-IN' : `${lang}-IN`, toISO(new Date(w.updatedAt)) === todayDate ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</span>}
+          {w.updatedAt && <span className="text-forest-500/80">· {t('wx.updated', { time: fmtStamp(w.updatedAt, lang, toISO(new Date(w.updatedAt)) === todayDate ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</span>}
         </span>
       }
       action={
@@ -169,7 +167,7 @@ export default function Weather() {
 
               <div className="flex flex-wrap gap-3 mt-4">
                 <button onClick={remind} className="btn bg-white text-forest-900 hover:bg-cream-100"><BellPlus size={18} /> {t('weather.addTask')}</button>
-                <button onClick={() => chat.ask(L(demoQuestion))} className="btn bg-white/15 text-white hover:bg-white/25"><Sparkles size={18} /> {t('weather.askAi')}</button>
+                <button onClick={() => chat.ask(t('wx.askQ'))} className="btn bg-white/15 text-white hover:bg-white/25"><Sparkles size={18} /> {t('weather.askAi')}</button>
               </div>
             </div>
           </section>
@@ -188,12 +186,6 @@ export default function Weather() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <Stat icon={Thermometer} label={t('weather.temp')} value={`${fmt(d.current.temp, 1)}°C`} />
-              <Stat icon={Droplets} label={t('weather.humidity')} value={`${fmt(d.current.humidity)}%`} />
-              <Stat icon={Umbrella} label={t('wx.rain24')} value={`${fmt(today?.prob)}%`} />
-              <Stat icon={CloudRain} label={t('wx.rainMm')} value={`${fmt(today?.mm, 1)} ${t('weather.mm')}`} />
-            </div>
             {d.current.wind != null && (
               <p className="mt-3 text-sm text-forest-700 flex items-center gap-2"><Wind size={16} className="text-forest-500" /> {t('weather.wind')}: {fmt(d.current.wind)} {t('weather.kmh')}</p>
             )}
@@ -207,13 +199,13 @@ export default function Weather() {
                 <ComposedChart data={chartData} margin={{ top: 8, right: 0, left: -18, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e2db" vertical={false} />
                   <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#2f7d52' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="l" tick={{ fontSize: 12, fill: '#3d8fa8' }} axisLine={false} tickLine={false} unit="%" domain={[0, 100]} />
+                  <YAxis yAxisId="l" tick={{ fontSize: 12, fill: '#2c3f7d' }} axisLine={false} tickLine={false} unit="%" domain={[0, 100]} />
                   <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 12, fill: '#c98a2b' }} axisLine={false} tickLine={false} unit="°" domain={['dataMin - 3', 'dataMax + 3']} />
                   <Tooltip
                     contentStyle={{ borderRadius: 12, border: '1px solid #e2e2db' }}
                     formatter={(v, n) => (n === 'rain' ? [`${v}%`, t('weather.rain')] : [`${v}°C`, t('weather.temp')])}
                   />
-                  <Bar yAxisId="l" dataKey="rain" fill="#7bb8cc" radius={[6, 6, 0, 0]} barSize={26} />
+                  <Bar yAxisId="l" dataKey="rain" fill="#94a3cf" radius={[6, 6, 0, 0]} barSize={26} />
                   <Line yAxisId="r" type="monotone" dataKey="temp" stroke="#c98a2b" strokeWidth={3} dot={{ r: 4, fill: '#c98a2b' }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -230,7 +222,7 @@ export default function Weather() {
               <ul className="space-y-3">
                 {w.alerts.map((a) => {
                   const txt = alertText(a, t, lang);
-                  const box = a.level === 'high' ? 'bg-clay-100 border-clay-500/30' : a.type === 'heat' ? 'bg-earth-100 border-earth-500/30' : 'bg-sky-100 border-sky-500/30';
+                  const box = a.level === 'high' ? 'bg-clay-100 border-clay-500/30' : a.type === 'heat' ? 'bg-earth-100 border-earth-500/30' : 'bg-navy-100 border-navy-500/30';
                   return (
                     <li key={a.type} className={`rounded-2xl border p-4 ${box}`}>
                       <div className="font-semibold text-forest-900">{txt.title}</div>
@@ -265,16 +257,6 @@ export default function Weather() {
           <p className="text-xs text-forest-600/80">{t('wx.source')} (open-meteo.com)</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stat({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-xl bg-cream-100 p-3">
-      <Icon size={18} className="text-forest-500" aria-hidden />
-      <div className="text-xs text-forest-600/80 mt-1">{label}</div>
-      <div className="font-semibold text-forest-900">{value}</div>
     </div>
   );
 }

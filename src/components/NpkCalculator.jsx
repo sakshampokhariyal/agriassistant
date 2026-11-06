@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FlaskConical, Beaker, Info, Sprout } from 'lucide-react';
+import { FlaskConical, Info, Sprout } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SectionTitle } from './ui';
 import { NPK_LIMITS, RDF, HA_PER_ACRE, rateLevel, fertilizerPlan } from '../data/communityTools';
@@ -7,9 +7,9 @@ import { npkKeyFor } from '../data/cropMasterData';
 
 /** NPK soil-test fertilizer calculator (shown on My Crops). */
 const NUTRIENT_STYLE = {
-  N: { dot: 'bg-blue-500', input: 'focus:ring-blue-300', badge: { low: 'bg-blue-50 text-blue-700 border-blue-200', medium: 'bg-forest-50 text-forest-700 border-forest-200', high: 'bg-emerald-600 text-white border-emerald-600' } },
+  N: { dot: 'bg-navy-500', input: 'focus:ring-navy-300', badge: { low: 'bg-navy-50 text-navy-700 border-navy-200', medium: 'bg-forest-50 text-forest-700 border-forest-200', high: 'bg-emerald-600 text-white border-emerald-600' } },
   P: { dot: 'bg-amber-500', input: 'focus:ring-amber-300', badge: { low: 'bg-amber-50 text-amber-700 border-amber-200', medium: 'bg-amber-100 text-amber-800 border-amber-300', high: 'bg-amber-500 text-white border-amber-500' } },
-  K: { dot: 'bg-violet-500', input: 'focus:ring-violet-300', badge: { low: 'bg-violet-50 text-violet-700 border-violet-200', medium: 'bg-violet-100 text-violet-800 border-violet-300', high: 'bg-violet-600 text-white border-violet-600' } },
+  K: { dot: 'bg-navy-500', input: 'focus:ring-navy-300', badge: { low: 'bg-navy-50 text-navy-700 border-navy-200', medium: 'bg-navy-100 text-navy-800 border-navy-300', high: 'bg-navy-600 text-white border-navy-600' } },
 };
 const fmt = (n, d = 0) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: d, minimumFractionDigits: d });
 /** Up to one decimal, none for whole numbers (100 → '100', 22.5 → '22.5'). */
@@ -99,9 +99,6 @@ export default function NpkCalculator({ field }) {
               );
             })}
           </div>
-          <button type="button" className="btn-ghost text-sm mt-3" onClick={() => setSoil({ N: '240', P: '30', K: '120' })}>
-            <Beaker size={16} aria-hidden /> {t('cm.npk.sample')}
-          </button>
         </div>
 
         {/* Results */}

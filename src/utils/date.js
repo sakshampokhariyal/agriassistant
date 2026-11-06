@@ -23,13 +23,20 @@ export const addDaysTo = (iso, n) => addDays(n, parseISO(iso));
 export const daysBetween = (aISO, bISO) =>
   Math.round((parseISO(bISO) - parseISO(aISO)) / 86400000);
 
+/** Some locales (kn-IN) print "ಅಕ್ಟೋ 15,2026" – always keep a space after a comma. */
+const tidy = (s) => s.replace(/,(?=\S)/g, ', ');
+
 export const fmtDate = (iso, lang, opts = { day: 'numeric', month: 'short' }) =>
-  new Intl.DateTimeFormat(localeOf(lang), opts).format(parseISO(iso));
+  tidy(new Intl.DateTimeFormat(localeOf(lang), opts).format(parseISO(iso)));
 
 export const fmtWeekday = (iso, lang, style = 'short') =>
   new Intl.DateTimeFormat(localeOf(lang), { weekday: style }).format(parseISO(iso));
 
 export const fmtLong = (lang, d = new Date()) =>
-  new Intl.DateTimeFormat(localeOf(lang), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+  tidy(new Intl.DateTimeFormat(localeOf(lang), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d));
 
 export const fmtNum = (n, lang) => new Intl.NumberFormat(localeOf(lang)).format(n);
+
+/** Date + time for "updated at" stamps (ms timestamp or Date), tidied like fmtDate. */
+export const fmtStamp = (ms, lang, opts = { dateStyle: 'medium', timeStyle: 'short' }) =>
+  tidy(new Intl.DateTimeFormat(localeOf(lang), opts).format(new Date(ms)));

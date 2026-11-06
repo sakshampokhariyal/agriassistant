@@ -21,7 +21,7 @@ import AerialFields from '../components/AerialFields';
 const ADVICE_CHIP = {
   red: 'bg-red-500 text-white',
   amber: 'bg-amber-400 text-amber-950',
-  blue: 'bg-sky-400 text-sky-950',
+  blue: 'bg-navy-400 text-navy-950',
   green: 'bg-emerald-400 text-emerald-950',
   gray: 'bg-white/20 text-white',
 };
@@ -29,8 +29,8 @@ const ADVICE_CHIP = {
 const QUICK = [
   { to: '/crop-doctor', key: 'nav.cropDoctor', sub: 'home.q.doctor', icon: Stethoscope, tone: 'bg-emerald-50 text-emerald-700' },
   { to: '/market', key: 'nav.market', sub: 'home.q.market', icon: LineChart, tone: 'bg-amber-50 text-amber-700' },
-  { to: '/nearby', key: 'home.q.shops', sub: 'home.q.shopsSub', icon: Store, tone: 'bg-sky-50 text-sky-700' },
-  { to: '/schemes', key: 'nav.schemes', sub: 'home.q.schemes', icon: Landmark, tone: 'bg-indigo-50 text-indigo-700' },
+  { to: '/nearby', key: 'home.q.shops', sub: 'home.q.shopsSub', icon: Store, tone: 'bg-navy-50 text-navy-700' },
+  { to: '/schemes', key: 'nav.schemes', sub: 'home.q.schemes', icon: Landmark, tone: 'bg-navy-50 text-navy-700' },
 ];
 
 /** The four growth phases shown on Home, mapped from each crop's own stage keys. */
@@ -70,7 +70,7 @@ export default function Dashboard() {
           </h1>
           <p className="mt-3 text-white/85 flex flex-wrap items-center gap-x-3 gap-y-1 text-base md:text-lg">
             <span className="inline-flex items-center gap-1.5"><CalendarDays size={17} aria-hidden /> {fmtLong(lang, new Date(now))}</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin size={17} aria-hidden /> {placeText(profile, farmLocation)}</span>
+            <Link to="/profile" className="inline-flex items-center gap-1.5 hover:underline"><MapPin size={17} aria-hidden /> {placeText(profile, farmLocation) || t('loc.notSet')}</Link>
           </p>
           <div className="mt-6 md:mt-8">
             <TodayAction />
@@ -80,7 +80,7 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 space-y-8 md:space-y-10">
         <QuickActions />
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6 items-start">
           <WeatherCard wx={wx} />
           <ActiveCrops />
         </div>
@@ -93,7 +93,7 @@ function QuickActions() {
   const { t } = useApp();
   return (
     <section aria-labelledby="home-quick">
-      <h2 id="home-quick" className="text-lg font-semibold text-forest-900 mb-3">{t('dash.quickActions')}</h2>
+      <h2 id="home-quick" className="h-section mb-3">{t('dash.quickActions')}</h2>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {QUICK.map(({ to, key, sub, icon: Icon, tone }) => (
           <Link key={to} to={to} className="card p-4 md:p-5 flex items-center gap-3 hover:shadow-lift transition min-h-[84px]">
@@ -117,8 +117,8 @@ function WeatherCard({ wx }) {
   const alerts = wx.alerts.slice(0, 3).map((a) => ({ a, ...alertText(a, t, lang) }));
 
   return (
-    <section className="space-y-3">
-      <Link to="/weather" className="block rounded-3xl bg-gradient-to-br from-[#12324a] to-[#0b3b24] text-white p-5 md:p-6 hover:opacity-95 transition">
+    <section className="space-y-3 min-w-0">
+      <Link to="/weather" className="block rounded-3xl bg-gradient-to-br from-navy-800 to-forest-800 text-white p-5 md:p-6 hover:opacity-95 transition">
         <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wider text-white/70">
           <span className="truncate">{place ? `${place} · ` : ''}{t('dash.weatherNow')}</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case tracking-normal shrink-0">
@@ -176,9 +176,9 @@ function ActiveCrops() {
   const { t, L, lang } = useApp();
   const crops = useCropViews();
   return (
-    <section className="card p-5 md:p-6">
+    <section className="card p-5 md:p-6 min-w-0">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-forest-900 flex items-center gap-2"><Sprout size={20} className="text-emerald-600" /> {t('home.crops.title')}</h2>
+        <h2 className="h-section flex items-center gap-2"><Sprout size={20} className="text-emerald-600" /> {t('home.crops.title')}</h2>
         {crops.length > 0 && (
           <Link to="/crops" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-600 min-h-[40px]">
             {t('common.viewAll')} <ArrowRight size={15} />
@@ -216,7 +216,7 @@ function ActiveCrops() {
                   <ol className="mt-3 grid grid-cols-4 gap-1" aria-label={t('crops.progress')}>
                     {PHASES.map((ph, i) => (
                       <li key={ph} className="min-w-0">
-                        <div className={`h-2 rounded-full ${i < idx ? 'bg-emerald-600' : i === idx ? 'bg-yellow-400' : 'bg-cream-200'}`} />
+                        <div className={`h-2 rounded-full ${i < idx ? 'bg-emerald-600' : i === idx ? 'bg-brand-gold' : 'bg-cream-200'}`} />
                         <div className={`mt-1 text-[11px] truncate ${i === idx ? 'font-semibold text-forest-900' : 'text-forest-600'}`}>{t(`home.ph.${ph}`)}</div>
                       </li>
                     ))}

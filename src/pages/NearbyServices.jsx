@@ -14,9 +14,9 @@ const RADII = [10, 25, 50];
 const FILTERS = ['all', 'store', 'kvk', 'market'];
 const CAT = {
   store: { icon: Store, tone: 'bg-emerald-50 text-emerald-700' },
-  kvk: { icon: Building2, tone: 'bg-sky-100 text-sky-500' },
+  kvk: { icon: Building2, tone: 'bg-navy-100 text-navy-500' },
   govt: { icon: Landmark, tone: 'bg-amber-50 text-amber-700' },
-  market: { icon: Warehouse, tone: 'bg-violet-50 text-violet-700' },
+  market: { icon: Warehouse, tone: 'bg-navy-50 text-navy-700' },
 };
 /** One-tap Google Maps searches around the farmer (real local listings with phones & hours). */
 const MAPS_SEARCHES = [
@@ -206,7 +206,7 @@ export default function NearbyServices() {
       {/* Official directories */}
       <section className="mt-6 grid sm:grid-cols-2 gap-3">
         <a href="https://kvk.icar.gov.in/" target="_blank" rel="noopener noreferrer" className="card p-4 flex items-start gap-3 hover:shadow-lift transition">
-          <Building2 size={22} className="text-sky-500 shrink-0 mt-0.5" />
+          <Building2 size={22} className="text-navy-500 shrink-0 mt-0.5" />
           <span>
             <span className="font-semibold text-forest-900 flex items-center gap-1">{t('nb.kvkDir')} <ExternalLink size={13} /></span>
             <span className="text-sm text-forest-600">{t('nb.kvkDirSub')}</span>

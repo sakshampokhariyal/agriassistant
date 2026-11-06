@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Camera, CalendarPlus, CheckCircle2, FlaskConical, ImagePlus, Leaf, RefreshCw, ScanLine, ShieldAlert, Sprout, Sun, Focus, Maximize, Hand, AlertTriangle,
+  Camera, CalendarPlus, CheckCircle2, ImagePlus, Leaf, RefreshCw, ScanLine, ShieldAlert, Sprout, Sun, Focus, Maximize, Hand, AlertTriangle,
   Sparkles, HelpCircle, ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { diagnose, recheck, removeLeaves, sprayDry } from '../data/diagnosis';
+import { recheck, removeLeaves, sprayDry } from '../data/diagnosis';
 import { cropCatalog } from '../data/farmer';
 import { diagnoseCropImage } from '../services/groq';
 import { addDays } from '../utils/date';
@@ -33,7 +33,7 @@ export default function CropDoctor() {
   const [phase, setPhase] = useState('idle'); // idle | analyzing | done
   const [report, setReport] = useState(null);
   const [picked, setPicked] = useState({});
-  const [aiState, setAiState] = useState('idle'); // idle | ok | fallback
+  const [failed, setFailed] = useState(null); // null | 'busy' | 'offline'
 
   useEffect(() => () => clearTimeout(timer.current), []);
   // New field selected → start over.
@@ -53,29 +53,31 @@ export default function CropDoctor() {
       setPhase('idle');
       setReport(null);
     } catch {
-      toast('Image only', 'error');
+      toast(t('chat.imageOnly'), 'error');
     }
   };
 
-  /** AI diagnosis via Groq vision (qwen/qwen3.8-27b); falls back to the demo report offline. */
+  /** AI diagnosis via Groq vision. If it can't be reached, say so – never show a made-up result. */
   const analyze = async () => {
     setPhase('analyzing');
+    setFailed(null);
     const started = Date.now();
-    let r;
+    let r = null;
     try {
       const cropName = activeField && cropCatalog[activeField.cropId] ? cropCatalog[activeField.cropId].name.en : '';
       const ai = await diagnoseCropImage(photo, { lang, cropName });
       const tasks = ai.notPlant ? [recheck(1)] : ai.healthy ? [recheck(7)] : [removeLeaves(2), sprayDry(3), recheck(7)];
       r = { ...ai, tasks };
-      setAiState('ok');
     } catch (e) {
-      r = { ...diagnose(activeField?.cropId), source: 'demo' };
-      setAiState('fallback');
-      toast(t(e?.message === 'rate_limited' ? 'dx.ai.busy' : 'dx.ai.fallback'), 'info');
+      setFailed(e?.message === 'rate_limited' ? 'busy' : 'offline');
     }
     // Keep the scan animation visible briefly so the result doesn't flash in.
     const wait = 900 - (Date.now() - started);
     if (wait > 0) await new Promise((res) => (timer.current = setTimeout(res, wait)));
+    if (!r) {
+      setPhase('idle');
+      return;
+    }
     setReport(r);
     setPicked(Object.fromEntries(r.tasks.map((_, i) => [i, true])));
     setPhase('done');
@@ -98,7 +100,7 @@ export default function CropDoctor() {
 
   return (
     <div>
-      <PageHeader title={t('dx.title')} subtitle={t('dx.sub')} demo={aiState === 'fallback'} />
+      <PageHeader title={t('dx.title')} subtitle={t('dx.sub')} />
       <FieldTabs className="mb-5" />
 
       <div className="grid lg:grid-cols-[minmax(0,26rem)_1fr] gap-5 items-start">
@@ -119,13 +121,13 @@ export default function CropDoctor() {
             {/* Framing guide */}
             <div className="absolute inset-[12%] rounded-2xl border-2 border-dashed border-white/70 pointer-events-none" aria-hidden>
               {['top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl', 'top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl', 'bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl', 'bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl'].map((c) => (
-                <span key={c} className={`absolute h-6 w-6 border-yellow-300 -m-0.5 ${c}`} />
+                <span key={c} className={`absolute h-6 w-6 border-brand-gold-light -m-0.5 ${c}`} />
               ))}
             </div>
             {phase === 'analyzing' && (
               <>
                 <div className="absolute inset-0 bg-forest-900/40" />
-                <div className="scan-line absolute left-0 right-0 h-1 bg-yellow-300 shadow-[0_0_16px_4px_rgba(253,224,71,0.8)]" />
+                <div className="scan-line absolute left-0 right-0 h-1 bg-brand-gold-light shadow-[0_0_16px_4px_rgba(233,168,79,0.8)]" />
               </>
             )}
           </div>
@@ -150,7 +152,16 @@ export default function CropDoctor() {
 
         {/* Report */}
         <section className="min-w-0">
-          {!report ? (
+          {failed && !report ? (
+            <div className="card p-6 border border-amber-200 bg-amber-50 text-amber-900">
+              <p className="font-semibold flex items-center gap-2"><AlertTriangle size={18} /> {t(failed === 'busy' ? 'dx.ai.busy' : 'dx.fail.title')}</p>
+              <p className="text-sm mt-1">{t('dx.fail.body')}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button className="btn-primary !min-h-[44px] text-sm" onClick={analyze}><RefreshCw size={16} /> {t('dx.fail.retry')}</button>
+                <Link to="/nearby" className="btn-ghost !min-h-[44px] text-sm bg-white">{t('dx.fail.expert')}</Link>
+              </div>
+            </div>
+          ) : !report ? (
             <div className="card p-8 text-center text-forest-600">
               <ScanLine size={32} className="mx-auto text-forest-300" />
               <p className="mt-2">{t('dx.empty')}</p>
@@ -168,7 +179,6 @@ export default function CropDoctor() {
 
 function Report({ report, picked, setPicked, onAddTasks }) {
   const { t, L } = useApp();
-  const isAi = report.source === 'ai';
   const hasRemedies = report.traditional.length + report.organic.length + report.chemical.length > 0;
   const HeadIcon = report.notPlant ? HelpCircle : report.healthy ? CheckCircle2 : ShieldAlert;
   const tone = report.notPlant ? 'bg-amber-50 text-amber-700' : report.healthy ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700';
@@ -176,12 +186,8 @@ function Report({ report, picked, setPicked, onAddTasks }) {
     <div className="space-y-4">
       <div className="card p-5">
         <div className="flex flex-wrap gap-2 mb-2">
-          {isAi ? (
-            <Badge tone="green"><Sparkles size={13} /> {t('dx.ai.badge')}</Badge>
-          ) : (
-            <Badge tone="amber"><FlaskConical size={13} /> {t('dx.mock')}</Badge>
-          )}
-          {isAi && report.cropSeen && !report.notPlant && <Badge tone="gray">{t('dx.ai.cropSeen', { crop: report.cropSeen })}</Badge>}
+          <Badge tone="green"><Sparkles size={13} /> {t('dx.ai.badge')}</Badge>
+          {report.cropSeen && !report.notPlant && <Badge tone="gray">{t('dx.ai.cropSeen', { crop: report.cropSeen })}</Badge>}
         </div>
         <div className="flex items-start gap-3">
           <span className={`h-12 w-12 rounded-2xl grid place-items-center shrink-0 ${tone}`}><HeadIcon size={24} /></span>
@@ -216,7 +222,7 @@ function Report({ report, picked, setPicked, onAddTasks }) {
         <RemedyCol n={2} title={t('dx.rem.organic')} tone="bg-emerald-50 border-emerald-200">
           <Doses items={report.organic} />
         </RemedyCol>
-        <RemedyCol n={3} title={t('dx.rem.chemical')} tone="bg-sky-50 border-sky-200">
+        <RemedyCol n={3} title={t('dx.rem.chemical')} tone="bg-navy-50 border-navy-200">
           <Doses items={report.chemical} />
           {report.chemical.length > 0 && <p className="text-xs text-red-800 mt-3 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" /> {t('dx.safety')}</p>}
         </RemedyCol>

@@ -72,7 +72,7 @@ export default function Insurance() {
       <PageHeader title={t('ins.title')} subtitle={t('ins.sub')} />
 
       <p className="flex gap-2 rounded-2xl bg-forest-800 text-white/90 p-3 md:p-4 mb-5 text-sm">
-        <ShieldAlert size={18} className="shrink-0 mt-0.5 text-yellow-300" /> {t('ins.disclaimer')}
+        <ShieldAlert size={18} className="shrink-0 mt-0.5 text-brand-gold-light" /> {t('ins.disclaimer')}
       </p>
 
       <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mb-5 -mx-4 px-4 md:mx-0 md:px-0" role="tablist" aria-label={t('ins.title')}>

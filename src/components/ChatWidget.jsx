@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Camera, Mic, Send, Sparkles, Trash2, X, Square, MessageCircle, Minus, Volume2, VolumeX, Phone, UserRoundSearch } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -7,17 +7,18 @@ import { useApp } from '../context/AppContext';
 import { useChat } from '../context/ChatContext';
 import { useWeather } from '../context/WeatherContext';
 import useLocalStorage from '../hooks/useLocalStorage';
-import { analyzeLeaf, detectIntent, replyFor, suggestedPrompts, welcomeMessage } from '../data/ai';
+import { detectIntent, replyFor, suggestedPrompts, welcomeMessage } from '../data/ai';
+import useCropViews from '../hooks/useCropViews';
+import { fieldLabel } from '../utils/fields';
 import { fmt, placeLabel } from '../utils/weatherText';
 import { askGroq } from '../services/groq';
 import { Badge, RichText } from './ui';
-import DiseaseResult from './DiseaseResult';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const CHIP = {
   red: 'bg-red-100 text-red-800',
   amber: 'bg-amber-100 text-amber-800',
-  blue: 'bg-sky-100 text-sky-800',
+  blue: 'bg-navy-100 text-navy-800',
   green: 'bg-emerald-100 text-emerald-800',
   gray: 'bg-white/20 text-white',
 };
@@ -67,7 +68,7 @@ export default function ChatWidget() {
           <>
             <span className="relative">
               <MessageCircle size={24} />
-              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-emerald-600" />
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-brand-gold ring-2 ring-emerald-600" />
             </span>
             <span className="hidden sm:inline font-semibold pr-1">{t('chat.launcher')}</span>
           </>
@@ -78,9 +79,14 @@ export default function ChatWidget() {
 }
 
 function ChatPanel({ onClose }) {
-  const { t, L, lang, profile, toast, activeField } = useApp();
+  const { t, L, lang, profile, toast, today } = useApp();
   const { pendingAsk, clearPending } = useChat();
   const weather = useWeather();
+  const fields = useCropViews();
+  // Offline answers are built from the farmer's own data (fields, calendar, saved prices, schemes).
+  const farmCtx = useMemo(() => ({ fields, profile, today }), [fields, profile, today]);
+  const farmRef = useRef(farmCtx);
+  farmRef.current = farmCtx;
   const weatherRef = useRef(weather);
   weatherRef.current = weather;
   const [messages, setMessages] = useLocalStorage('ks-chat-v1', []);
@@ -135,6 +141,20 @@ function ChatPanel({ onClose }) {
         );
       }
       if (w?.decision?.status) lines.push(`App advisory today: ${t(`wx.status.${w.decision.status}`)} – ${t(`wx.reason.${w.decision.status}`)}`);
+      const f = farmRef.current.fields;
+      if (f.length) {
+        const en = (o) => (o ? o.en : '');
+        lines.push(
+          "Farmer's fields: " +
+            f
+              .slice(0, 6)
+              .map((x) => `${fieldLabel(x, t, en)} – ${x.acres} acres, ${x.perennial ? 'perennial plantation' : `day ${x.elapsed} after sowing`}, stage: ${en(x.stage)}`)
+              .join('; ') +
+            '.'
+        );
+      } else {
+        lines.push('The farmer has not added any fields yet.');
+      }
     } catch {
       /* context is optional */
     }
@@ -152,7 +172,7 @@ function ChatPanel({ onClose }) {
           .map((m) => {
             if (m.role === 'user' && m.text) return { role: 'user', content: m.text };
             if (m.role === 'bot' && m.text) return { role: 'assistant', content: m.text };
-            if (m.role === 'bot' && m.intent) return { role: 'assistant', content: replyFor(m.intent, lang, m.weather || weatherRef.current).slice(0, 600) };
+            if (m.role === 'bot' && m.intent) return { role: 'assistant', content: replyFor(m.intent, lang, m.weather || weatherRef.current, farmRef.current).slice(0, 600) };
             return null;
           })
           .filter(Boolean);
@@ -181,7 +201,7 @@ function ChatPanel({ onClose }) {
 
   /**
    * Photo question → vision model (qwen/qwen3.8-27b) with the image as a base64 data URL.
-   * If Groq can't answer, fall back to the simulated local diagnosis so a demo never breaks.
+   * If Groq can't answer, the chat says so – it never invents a diagnosis.
    */
   const replyImage = useCallback(
     async (userText, image) => {
@@ -195,12 +215,12 @@ function ChatPanel({ onClose }) {
         const text = await askGroq(history, { lang, context: buildContext(), image });
         setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', text, source: 'groq', vision: true }]);
       } catch {
-        await delay(700);
-        setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', analysis: activeField?.cropId || 'ragi' }]);
+        // No made-up diagnosis: say the photo could not be checked and point to Crop Doctor / an expert.
+        setMessages((m) => [...m, { id: `b${Date.now()}`, role: 'bot', intent: 'photoFailed' }]);
       }
       if (mounted.current) setBusy(false);
     },
-    [setMessages, lang, buildContext, t, activeField?.cropId]
+    [setMessages, lang, buildContext, t]
   );
 
   const send = useCallback(
@@ -338,7 +358,7 @@ function ChatPanel({ onClose }) {
   const goExpert = () => {
     stopSpeaking();
     onClose();
-    navigate('/help');
+    navigate('/community');
   };
 
   const clear = () => {
@@ -367,7 +387,7 @@ function ChatPanel({ onClose }) {
     <div className="relative flex flex-col h-full min-h-0">
       <header className="flex items-center gap-3 px-4 py-3 bg-forest-800 text-white pt-[max(0.75rem,env(safe-area-inset-top))]">
         <span className="h-10 w-10 rounded-2xl bg-white/15 grid place-items-center shrink-0">
-          <Sparkles size={20} className="text-yellow-300" />
+          <Sparkles size={20} className="text-brand-gold-light" />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold leading-tight">{t('assistant.title')}</h2>
@@ -412,14 +432,14 @@ function ChatPanel({ onClose }) {
           ) : (
             <Bubble key={m.id} role="bot" label={t('assistant.bot')}>
               {(() => {
-                const res = m.analysis ? analyzeLeaf(m.analysis) : null;
-                const text = res ? `${L(res.name)}. ${L(res.summary)}` : m.text || replyFor(m.intent, lang, m.weather || weather);
+                const failed = m.analysis || m.intent === 'photoFailed';
+                const text = failed ? t('chat.photoFailed') : m.text || replyFor(m.intent, lang, m.weather || weather, farmCtx);
                 const isAi = m.source === 'groq';
                 const speaking = speakingId === m.id;
                 return (
                   <>
-                    {res ? <DiseaseResult result={res} compact /> : <RichText text={text} />}
-                    {m.intent === 'fallback' && (
+                    <RichText text={text} />
+                    {(m.intent === 'fallback' || failed) && (
                       <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
                         <p className="font-medium">{t('chat.notAnswered')}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -432,7 +452,7 @@ function ChatPanel({ onClose }) {
                       {isAi ? (
                         <Badge tone="green"><Sparkles size={12} className="inline -mt-0.5 mr-1" aria-hidden />{t('chat.aiBadge')}</Badge>
                       ) : (
-                        !res && <Badge tone="amber">{t('chat.offlineBadge')}</Badge>
+                        <Badge tone="amber">{t('chat.offlineBadge')}</Badge>
                       )}
                       <button
                         onClick={() => speak(m.id, text)}

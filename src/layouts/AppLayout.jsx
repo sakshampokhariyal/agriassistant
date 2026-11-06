@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Home, MessageCircle, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
-  Grid2x2, LogIn, LogOut, X, FlaskConical, ChevronDown, ShieldCheck, Megaphone, Umbrella,
-  Stethoscope, LifeBuoy, Settings2, Feather, CloudOff, Smartphone, Store,
+  Home, Sprout, CloudSun, Landmark, LineChart, CalendarDays, Users, UserRound,
+  Grid2x2, LogIn, LogOut, X, ChevronDown, ShieldCheck, Megaphone, Umbrella,
+  Stethoscope, Settings2, Feather, CloudOff, Smartphone, Store,
 } from 'lucide-react';
 import { MotionConfig } from 'framer-motion';
 import { useApp } from '../context/AppContext';
@@ -29,7 +29,6 @@ export const NAV = [
   { to: '/schemes', key: 'nav.schemes', icon: Landmark },
   { to: '/insurance', key: 'nav.insurance', icon: Umbrella },
   // Not in the sidebar / More menu; still reached from the chat and Crop Doctor "Ask an expert" links.
-  { to: '/help', key: 'nav.help', icon: LifeBuoy, hidden: true },
   { to: '/community', key: 'nav.community', icon: Users },
   { to: '/settings', key: 'nav.settings', icon: Settings2 },
   { to: '/profile', key: 'nav.profile', icon: UserRound },
@@ -80,7 +79,7 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <BrandLogo size="sm" tagline={t('app.tagline')} />
         <p className="text-xs text-forest-700/70 sm:text-right max-w-md">
-          © {new Date().getFullYear()} {t('app.name')} · {t('footer.demo')}
+          © {new Date().getFullYear()} {t('app.name')} · {t('footer.sources')}
         </p>
       </div>
     </footer>
@@ -350,9 +349,6 @@ function MoreSheet({ open, onClose }) {
                 {auth.loggedIn ? t('common.logout') : t('common.login')}
               </button>
             </div>
-            <p className="mt-4 text-xs text-earth-700 flex gap-1.5">
-              <FlaskConical size={14} className="shrink-0" /> {t('footer.demo')}
-            </p>
           </motion.div>
         </div>
       )}

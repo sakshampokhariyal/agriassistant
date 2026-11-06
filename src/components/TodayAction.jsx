@@ -88,17 +88,17 @@ export default function TodayAction() {
   return (
     <section className="rounded-3xl bg-gradient-to-br from-forest-800 to-[#0b3b24] text-white p-6 md:p-8 lg:p-10 shadow-lift min-h-[22rem]" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="pill-badge-glass !text-sm"><Sparkles size={15} className="text-yellow-300" /> {t('ta.title')}</span>
-        <span className="text-sm text-white/75">{t('ta.doneCount', { n: doneCount, total: totalCount })}</span>
+        <span className="pill-badge-glass !text-sm"><Sparkles size={15} className="text-brand-gold-light" /> {t('ta.title')}</span>
+        {totalCount > 0 && <span className="text-sm text-white/75">{t('ta.doneCount', { n: doneCount, total: totalCount })}</span>}
       </div>
 
-      {top ? (
+      {!fields.length && !top ? null : top ? (
         <div className="grid lg:grid-cols-[1fr_20rem] gap-6 mt-6">
           <div className="min-w-0">
             <div className="flex items-start gap-3">
-              <span className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/15 grid place-items-center shrink-0"><Icon size={30} className="text-yellow-300" /></span>
+              <span className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/15 grid place-items-center shrink-0"><Icon size={30} className="text-brand-gold-light" /></span>
               <div className="min-w-0">
-                <span className="text-[11px] uppercase tracking-wider text-yellow-300 font-semibold">{t('ta.priority', { n: 1 })}</span>
+                <span className="text-[11px] uppercase tracking-wider text-brand-gold-light font-semibold">{t('ta.priority', { n: 1 })}</span>
                 <h2 className="text-2xl md:text-4xl font-semibold leading-tight">{text(top, 'title')}</h2>
                 <p className="text-white/85 mt-2 text-base md:text-lg">{text(top, 'why')}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -119,7 +119,7 @@ export default function TodayAction() {
                   const I = ICONS[a.icon] || Sparkles;
                   return (
                     <li key={a.id} className="flex items-start gap-2 text-sm md:text-base">
-                      <span className="text-yellow-300 font-semibold w-4">{i + 2}</span>
+                      <span className="text-brand-gold-light font-semibold w-4">{i + 2}</span>
                       <I size={15} className="mt-0.5 shrink-0 text-white/80" />
                       <span className="flex-1 min-w-0">{text(a, 'title')}</span>
                     </li>
@@ -198,7 +198,7 @@ function CalendarToday({ overview, calendarText, onToggle }) {
           <p className="font-semibold text-base md:text-lg">{t('kb.noOps')}</p>
           {overview.next && (
             <p className="flex gap-2">
-              <CalendarClock size={16} className="shrink-0 mt-0.5 text-yellow-300" />
+              <CalendarClock size={16} className="shrink-0 mt-0.5 text-brand-gold-light" />
               <span>
                 <b>{overview.next.inDays === 1 ? t('ta.cal.nextTomorrow') : t('ta.cal.next', { n: overview.next.inDays })}</b>{' '}
                 {calendarText({ ...overview.next, das: overview.next.startDay, dap: overview.next.dapStart }).label}: {L(overview.next.title)}

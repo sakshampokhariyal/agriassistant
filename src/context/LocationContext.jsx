@@ -9,7 +9,7 @@ const LocationContext = createContext(null);
  * On load it asks the browser for the position, reverse-geocodes it (BigDataCloud) and copies
  * town / district / state into the farmer profile – unless the farmer typed their location in
  * Profile (`locationSource: 'manual'`). If access is denied the profile keeps its last value
- * (the demo default is Kikkeri, Mandya).
+ * (a new farmer starts with no location until it is detected or entered).
  */
 export function LocationProvider({ children }) {
   const { profile, setProfile } = useApp();

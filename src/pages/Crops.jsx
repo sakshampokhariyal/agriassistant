@@ -108,8 +108,8 @@ function FieldDetail({ field, onEdit, onRemove }) {
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
           <Info icon={Ruler} label={t('fld.area')} value={`${field.acres} ${t('common.acres')}`} />
           <Info icon={CalendarDays} label={t(dateLabelKey(field.cropId))} value={fmtDate(field.sowDate, lang, { day: 'numeric', month: 'short', year: 'numeric' })} />
-          <Info icon={Mountain} label={t('profile.soil')} value={t(`opt.soil.${field.soil || 'red'}`)} />
-          <Info icon={Droplets} label={t('fld.irrigation')} value={t(`opt.irr.${field.irrigation || 'rainfed'}`)} />
+          <Info icon={Mountain} label={t('profile.soil')} value={field.soil ? t(`opt.soil.${field.soil}`) : '—'} />
+          <Info icon={Droplets} label={t('fld.irrigation')} value={field.irrigation ? t(`opt.irr.${field.irrigation}`) : '—'} />
         </dl>
 
         <StageAdvice field={field} />
@@ -129,7 +129,7 @@ function FieldDetail({ field, onEdit, onRemove }) {
 
 const ADVICE_KIND = {
   action: { icon: CalendarCheck, box: 'bg-cream-100 text-forest-800', iconCls: 'text-emerald-600' },
-  pest: { icon: Bug, box: 'bg-violet-50 text-forest-800', iconCls: 'text-violet-600' },
+  pest: { icon: Bug, box: 'bg-navy-50 text-forest-800', iconCls: 'text-navy-600' },
   critical: { icon: AlertOctagon, box: 'bg-red-50 border border-red-200 text-red-900', iconCls: 'text-red-600' },
   harvest: { icon: Wheat, box: 'bg-amber-50 text-forest-800', iconCls: 'text-amber-700' },
 };
@@ -191,8 +191,8 @@ function StageAdvice({ field }) {
           </li>
         )}
         {hints.map(({ key, icon: Icon, text }) => (
-          <li key={key} className="flex gap-2.5 rounded-xl bg-sky-100/70 p-3 text-forest-800">
-            <Icon size={18} className="shrink-0 mt-0.5 text-sky-500" /> <span>{text}</span>
+          <li key={key} className="flex gap-2.5 rounded-xl bg-navy-100/70 p-3 text-forest-800">
+            <Icon size={18} className="shrink-0 mt-0.5 text-navy-500" /> <span>{text}</span>
           </li>
         ))}
       </ul>
@@ -209,7 +209,7 @@ function Info({ icon: Icon, label, value }) {
   );
 }
 
-const BAR_COLORS = ['#059669', '#c98a2b', '#3d8fa8', '#a8452c', '#6b7d33', '#7c3aed'];
+const BAR_COLORS = ['#1b7a32', '#e9a84f', '#1b2a5e', '#58a73c', '#a96d1b', '#6377b3'];
 
 /** Combined Field Overview: totals across every field. */
 function CombinedOverview({ views }) {
@@ -279,10 +279,10 @@ function Stat({ value, label }) {
 
 function FieldModal({ open, field, onClose, onSave }) {
   const { t, L, profile } = useApp();
-  const blank = { name: '', cropId: 'ragi', acres: '1', sowDate: todayISO(), soil: profile.soil, irrigation: profile.irrigation };
+  const blank = { name: '', cropId: 'ragi', acres: '1', sowDate: todayISO(), soil: profile.soil || 'red', irrigation: profile.irrigation || 'rainfed' };
   const [f, setF] = useState(blank);
   useEffect(() => {
-    if (open) setF(field ? { name: field.name || '', cropId: field.cropId, acres: String(field.acres), sowDate: field.sowDate, soil: field.soil || profile.soil, irrigation: field.irrigation || profile.irrigation } : blank);
+    if (open) setF(field ? { name: field.name || '', cropId: field.cropId, acres: String(field.acres), sowDate: field.sowDate, soil: field.soil || profile.soil || 'red', irrigation: field.irrigation || profile.irrigation || 'rainfed' } : blank);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, field]);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
