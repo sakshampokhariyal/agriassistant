@@ -59,6 +59,9 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     return res.send(text);
   } catch (e) {
-    return res.status(502).json({ error: { message: e?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream request failed' } });
+    // Log the network-level reason (DNS, TLS, reset…) – never the URL, which carries the key.
+    const reason = e?.name === 'TimeoutError' ? 'timeout' : e?.cause?.code || e?.cause?.message || e?.message || 'unknown';
+    console.error(`[proxy:${service}] upstream failed: ${reason}`);
+    return res.status(502).json({ error: { message: e?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream request failed', reason } });
   }
 }
